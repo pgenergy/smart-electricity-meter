@@ -20,8 +20,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-
 #ifdef USE_SML_M
+
+#include <WiFiClient.h>
+#include <pb_encode.h>
+#include <include/energyleaf/ELData.pb.h>
+
+WiFiClient espClientEL;    
 
 #define XSNS_53 53
 
@@ -2458,6 +2463,15 @@ nextsect:
   }
 }
 
+const char PROGMEM POST_REQUEST[] = "POST /endpoint HTTP/1.1\r\n"
+                                     "Host: %s\r\n"
+                                     "Content-Type: application/x-protobuf\r\n"
+                                     "Content-Length: %d\r\n\r\n";
+
+const char PROGMEM EL_HOST[] = "127.0.0.1";
+const char PROGMEM EL_KEY[] = "energyleaf_wh";
+uint8_t PROGMEM EL_PORT = 80;
+
 //"1-0:1.8.0*255(@1," D_TPWRIN ",kWh," DJ_TPWRIN ",4|"
 void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
   char tpowstr[32];
@@ -2488,8 +2502,22 @@ void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
         if (dp & 0x10) {
           // immediate mqtt
           DOUBLE2CHAR(sml_globs.meter_vars[index], dp & 0xf, tpowstr);
-          ResponseTime_P(PSTR(",\"%s\":{\"%s\":%s}}"), sml_globs.mp[mindex].prefix, jname, tpowstr);
-          MqttPublishTeleSensor();
+          if(strcmp(jname,EL_KEY) == 0) {
+            ELData msg = ELData_init_default;
+            uint8_t vBuffer[ELData_size];
+            strcpy(msg.sensorId, "SENSORID");
+            msg.sensorValue = strtof(tpowstr,nullptr);
+            pb_ostream_t stream = pb_ostream_from_buffer(vBuffer, sizeof(vBuffer));
+            if (pb_encode(&stream, ELData_fields, &msg) && espClientEL.connect(EL_HOST,EL_PORT)) {
+              espClientEL.printf_P(POST_REQUEST, EL_HOST, stream.bytes_written);
+              espClientEL.write(vBuffer, stream.bytes_written);
+              espClientEL.stop();
+            }
+          } else {
+            ResponseTime_P(PSTR(",\"%s\":{\"%s\":%s}}"), sml_globs.mp[mindex].prefix, jname, tpowstr);
+            MqttPublishTeleSensor();
+          }
+
         }
       }
     }
