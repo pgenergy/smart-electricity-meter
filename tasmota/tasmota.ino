@@ -25,16 +25,16 @@
 #include <pb_encode.h>
 #include <include/energyleaf/Auth.pb.h>
 
-const char PROGMEM EL_HOST[] = "127.0.0.1";
+const char PROGMEM EL_HOST[] = "admin.energyleaf.de";
 
-uint8_t PROGMEM EL_PORT = 80;
+uint8_t PROGMEM EL_PORT = 443;
 
-const char PROGMEM POST_DATA[] = "POST /data HTTP/1.1\r\n"
+const char PROGMEM POST_DATA[] = "POST /api/v1/sensor_input HTTP/1.1\r\n"
                                      "Host: %s\r\n"
                                      "Content-Type: application/x-protobuf\r\n"
                                      "Content-Length: %d\r\n\r\n";
 
-const char PROGMEM POST_AUTH[] = "POST /token HTTP/1.1\r\n"
+const char PROGMEM POST_AUTH[] = "POST /api/v1/token HTTP/1.1\r\n"
                                      "Host: %s\r\n"
                                      "Content-Type: application/x-protobuf\r\n"
                                      "Content-Length: %d\r\n\r\n";      
