@@ -17,6 +17,35 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+
+//Energyleaf Start
+
+#include <WiFiClient.h>
+#include <pb_decode.h>
+#include <pb_encode.h>
+#include <include/energyleaf/Auth.pb.h>
+
+const char PROGMEM EL_HOST[] = "127.0.0.1";
+
+uint8_t PROGMEM EL_PORT = 80;
+
+const char PROGMEM POST_DATA[] = "POST /data HTTP/1.1\r\n"
+                                     "Host: %s\r\n"
+                                     "Content-Type: application/x-protobuf\r\n"
+                                     "Content-Length: %d\r\n\r\n";
+
+const char PROGMEM POST_AUTH[] = "POST /token HTTP/1.1\r\n"
+                                     "Host: %s\r\n"
+                                     "Content-Type: application/x-protobuf\r\n"
+                                     "Content-Length: %d\r\n\r\n";      
+
+bool eltLoaded = false;    
+char access_token[128];        
+uint32_t expires_in;                   
+
+//Energyleaf End
+
+
 // Location specific includes
 #ifndef ESP32_STAGE                         // ESP32 Stage has no core_version.h file. Disable include via PlatformIO Option
 #include <core_version.h>                   // Arduino_Esp8266 version information (ARDUINO_ESP8266_RELEASE and ARDUINO_ESP8266_RELEASE_2_7_1)
@@ -764,6 +793,44 @@ void setup(void) {
   ArduinoOTAInit();
 #endif  // USE_ARDUINO_OTA
 #endif  // ESP8266
+
+//Start Auth Energyleaf
+
+TokenRequest treqEL = TokenRequest_init_default;
+TokenResponse tresEL;
+uint8_t vBufferReq[TokenRequest_size];
+uint8_t vBufferRes[TokenResponse_size];
+WiFiClient espClientTokEL;
+
+String mac = WiFi.macAddress();
+std::copy(std::begin(mac), std::end(mac), treqEL.client_id);
+
+pb_ostream_t stream_out = pb_ostream_from_buffer(vBufferReq, sizeof(vBufferReq));
+if (pb_encode(&stream_out, TokenRequest_fields, &treqEL) && espClientTokEL.connect(EL_HOST,EL_PORT)) {
+  espClientTokEL.printf_P(POST_AUTH, EL_HOST, stream_out.bytes_written);
+  espClientTokEL.write(vBufferReq, stream_out.bytes_written);
+
+  String headers = "";
+  while (espClientTokEL.connected() || espClientTokEL.available()) {
+    String line = espClientTokEL.readStringUntil('\r');
+    headers += line + "\r";
+    if (line == "\n") {
+      break;
+    }
+  }
+
+  std::size_t bytesRead = espClientTokEL.readBytes(vBufferRes, sizeof(vBufferRes));
+  pb_istream_t stream_in = pb_istream_from_buffer(vBufferRes, bytesRead);
+
+  if (pb_decode(&stream_in, TokenResponse_fields, &tresEL)) {
+    strcpy(access_token, tresEL.access_token);
+    expires_in = tresEL.expires_in;
+    eltLoaded = true;
+  }
+              
+}
+//End Auth Energyleaf
+
 
   XdrvXsnsCall(FUNC_INIT);       // FUNC_INIT
 #ifdef USE_SCRIPT

@@ -2463,14 +2463,7 @@ nextsect:
   }
 }
 
-const char PROGMEM POST_REQUEST[] = "POST /endpoint HTTP/1.1\r\n"
-                                     "Host: %s\r\n"
-                                     "Content-Type: application/x-protobuf\r\n"
-                                     "Content-Length: %d\r\n\r\n";
-
-const char PROGMEM EL_HOST[] = "127.0.0.1";
 const char PROGMEM EL_KEY[] = "energyleaf_wh";
-uint8_t PROGMEM EL_PORT = 80;
 
 //"1-0:1.8.0*255(@1," D_TPWRIN ",kWh," DJ_TPWRIN ",4|"
 void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
@@ -2509,7 +2502,7 @@ void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
             msg.sensorValue = strtof(tpowstr,nullptr);
             pb_ostream_t stream = pb_ostream_from_buffer(vBuffer, sizeof(vBuffer));
             if (pb_encode(&stream, ELData_fields, &msg) && espClientEL.connect(EL_HOST,EL_PORT)) {
-              espClientEL.printf_P(POST_REQUEST, EL_HOST, stream.bytes_written);
+              espClientEL.printf_P(POST_DATA, EL_HOST, stream.bytes_written);
               espClientEL.write(vBuffer, stream.bytes_written);
               espClientEL.stop();
             }
