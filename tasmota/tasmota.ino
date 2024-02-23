@@ -826,7 +826,7 @@ if (pb_encode(&stream_out, TokenRequest_fields, &tokenrequest) && wifiClientToke
   pb_istream_t stream_in = pb_istream_from_buffer(bufferResponse, bytesRead);
 
   if (pb_decode(&stream_in, TokenResponse_fields, &tokenresponse)) {
-    if(tokenresponse.status >= 200 && tokenresponse.status <= 299 && tokenresponse.has_script) { //add tokenresponse.has_access_token
+    if(tokenresponse.status >= 200 && tokenresponse.status <= 299 && tokenresponse.has_access_token && tokenresponse.has_script) {
       strcpy(access_token, tokenresponse.access_token);
       expires_in = tokenresponse.expires_in;
       ENERGYLEAF_ACTIVE = true;
@@ -841,7 +841,13 @@ if (pb_encode(&stream_out, TokenRequest_fields, &tokenrequest) && wifiClientToke
       AddLog(LOG_LEVEL_ERROR, status);
       AddLog(LOG_LEVEL_ERROR, tokenresponse.status_message);
     }
+  } else {
+      ENERGYLEAF_ACTIVE = false;
+      AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING RESPONSE]"));
   }      
+} else {
+      ENERGYLEAF_ACTIVE = false;
+      AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING REQUEST]"));
 }
 //End Auth Energyleaf
 
