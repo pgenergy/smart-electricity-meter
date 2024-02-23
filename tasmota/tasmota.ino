@@ -23,25 +23,27 @@
 #include <WiFiClient.h>
 #include <pb_decode.h>
 #include <pb_encode.h>
-#include <include/energyleaf/Auth.pb.h>
+#include <include/energyleaf/Energyleaf.pb.h>
 
-const char PROGMEM EL_HOST[] = "admin.energyleaf.de";
+const char PROGMEM ENERGYLEAF_HOST[] = "admin.energyleaf.de";
 
-uint8_t PROGMEM EL_PORT = 443;
+uint8_t PROGMEM ENERGYLEAF_PORT = 443;
 
-const char PROGMEM POST_DATA[] = "POST /api/v1/sensor_input HTTP/1.1\r\n"
+const char PROGMEM ENERGYLEAF_POST_DATA[] = "POST /api/v1/sensor_input HTTP/1.1\r\n"
                                      "Host: %s\r\n"
                                      "Content-Type: application/x-protobuf\r\n"
                                      "Content-Length: %d\r\n\r\n";
 
-const char PROGMEM POST_AUTH[] = "POST /api/v1/token HTTP/1.1\r\n"
+const char PROGMEM ENERGYLEAF_POST_AUTH[] = "POST /api/v1/token HTTP/1.1\r\n"
                                      "Host: %s\r\n"
                                      "Content-Type: application/x-protobuf\r\n"
-                                     "Content-Length: %d\r\n\r\n";      
+                                     "Content-Length: %d\r\n\r\n";  
 
-bool eltLoaded = false;    
-char access_token[128];        
-uint32_t expires_in;                   
+const SensorType PROGMEM ENERGYLEAF_SENSORTYPE = SensorType_DIGITAL_ELECTRICITY; 
+
+bool ENERGYLEAF_ACTIVE = false;    
+char access_token[45];       
+uint32_t expires_in;             
 
 //Energyleaf End
 
@@ -302,6 +304,7 @@ USBCDC TasConsole;                          // ESP32Sx embedded USB interface
 bool tasconsole_serial = false;
 //#warning **** TasConsole uses USBCDC ****
 #endif  // ARDUINO_USB_MODE
+#include <string>
 
 #else   // No USE_USB_CDC_CONSOLE
 HardwareSerial TasConsole = Serial;         // Fallback serial interface for ESP32C3, S2 and S3 if no USB_SERIAL defined
@@ -796,38 +799,49 @@ void setup(void) {
 
 //Start Auth Energyleaf
 
-TokenRequest treqEL = TokenRequest_init_default;
-TokenResponse tresEL;
-uint8_t vBufferReq[TokenRequest_size];
-uint8_t vBufferRes[TokenResponse_size];
-WiFiClient espClientTokEL;
+TokenRequest tokenrequest = TokenRequest_init_default;
+TokenResponse tokenresponse = TokenResponse_init_default;
+uint8_t bufferRequest[TokenRequest_size];
+uint8_t bufferResponse[TokenResponse_size];
+WiFiClient wifiClientToken; //Check later the secure version!
 
 String mac = WiFi.macAddress();
-std::copy(std::begin(mac), std::end(mac), treqEL.client_id);
+std::copy(std::begin(mac), std::end(mac), tokenrequest.client_id);
 
-pb_ostream_t stream_out = pb_ostream_from_buffer(vBufferReq, sizeof(vBufferReq));
-if (pb_encode(&stream_out, TokenRequest_fields, &treqEL) && espClientTokEL.connect(EL_HOST,EL_PORT)) {
-  espClientTokEL.printf_P(POST_AUTH, EL_HOST, stream_out.bytes_written);
-  espClientTokEL.write(vBufferReq, stream_out.bytes_written);
+pb_ostream_t stream_out = pb_ostream_from_buffer(bufferRequest, sizeof(bufferRequest));
+if (pb_encode(&stream_out, TokenRequest_fields, &tokenrequest) && wifiClientToken.connect(ENERGYLEAF_HOST,ENERGYLEAF_PORT)) {
+  wifiClientToken.printf_P(ENERGYLEAF_POST_AUTH, ENERGYLEAF_HOST, stream_out.bytes_written);
+  wifiClientToken.write(bufferRequest, stream_out.bytes_written);
 
   String headers = "";
-  while (espClientTokEL.connected() || espClientTokEL.available()) {
-    String line = espClientTokEL.readStringUntil('\r');
+  while (wifiClientToken.connected() || wifiClientToken.available()) {
+    String line = wifiClientToken.readStringUntil('\r');
     headers += line + "\r";
     if (line == "\n") {
       break;
     }
   }
 
-  std::size_t bytesRead = espClientTokEL.readBytes(vBufferRes, sizeof(vBufferRes));
-  pb_istream_t stream_in = pb_istream_from_buffer(vBufferRes, bytesRead);
+  std::size_t bytesRead = wifiClientToken.readBytes(bufferResponse, sizeof(bufferResponse));
+  pb_istream_t stream_in = pb_istream_from_buffer(bufferResponse, bytesRead);
 
-  if (pb_decode(&stream_in, TokenResponse_fields, &tresEL)) {
-    strcpy(access_token, tresEL.access_token);
-    expires_in = tresEL.expires_in;
-    eltLoaded = true;
-  }
-              
+  if (pb_decode(&stream_in, TokenResponse_fields, &tokenresponse)) {
+    if(tokenresponse.status >= 200 && tokenresponse.status <= 299 && tokenresponse.has_script) { //add tokenresponse.has_access_token
+      strcpy(access_token, tokenresponse.access_token);
+      expires_in = tokenresponse.expires_in;
+      ENERGYLEAF_ACTIVE = true;
+      //ToDo: set Script!
+      AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: SUCCESSFUL"));
+    } else {
+      ENERGYLEAF_ACTIVE = false;
+      AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL"));
+      AddLog(LOG_LEVEL_ERROR, "ENERGYLEAF_TOKEN_REQUEST_ERROR:");
+      char status[11];
+      snprintf(status,sizeof status, "%", PRIu32, tokenresponse.status);
+      AddLog(LOG_LEVEL_ERROR, status);
+      AddLog(LOG_LEVEL_ERROR, tokenresponse.status_message);
+    }
+  }      
 }
 //End Auth Energyleaf
 
