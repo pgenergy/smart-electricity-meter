@@ -18,36 +18,6 @@
 */
 
 
-//Energyleaf Start
-
-#include <WiFiClientSecure.h>
-#include <pb_decode.h>
-#include <pb_encode.h>
-#include <include/energyleaf/Energyleaf.pb.h>
-
-const char PROGMEM ENERGYLEAF_HOST[] = "https://admin.energyleaf.de";
-
-uint8_t PROGMEM ENERGYLEAF_PORT = 443;
-
-const char PROGMEM ENERGYLEAF_POST_DATA[] = "POST /api/v1/sensor_input HTTP/1.1\r\n"
-                                     "Host: %s\r\n"
-                                     "Content-Type: application/x-protobuf\r\n"
-                                     "Content-Length: %d\r\n\r\n";
-
-const char PROGMEM ENERGYLEAF_POST_AUTH[] = "POST /api/v1/token HTTP/1.1\r\n"
-                                     "Host: %s\r\n"
-                                     "Content-Type: application/x-protobuf\r\n"
-                                     "Content-Length: %d\r\n\r\n";  
-
-const SensorType PROGMEM ENERGYLEAF_SENSORTYPE = SensorType_DIGITAL_ELECTRICITY; 
-
-bool ENERGYLEAF_ACTIVE = false;    
-char access_token[45];       
-uint32_t expires_in;             
-
-//Energyleaf End
-
-
 // Location specific includes
 #ifndef ESP32_STAGE                         // ESP32 Stage has no core_version.h file. Disable include via PlatformIO Option
 #include <core_version.h>                   // Arduino_Esp8266 version information (ARDUINO_ESP8266_RELEASE and ARDUINO_ESP8266_RELEASE_2_7_1)
@@ -796,85 +766,6 @@ void setup(void) {
   ArduinoOTAInit();
 #endif  // USE_ARDUINO_OTA
 #endif  // ESP8266
-
-//Start Auth Energyleaf
-AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: START"));
-AddLog(LOG_LEVEL_ERROR, PSTR("WIFI: Status"));
-/*
-char char_arr [100];
-int num = 42;
-sprintf(char_arr, "%d", WiFi.status());*/
-char status[11];
-sprintf(status, "%d", (int)WiFi.status());
-AddLog(LOG_LEVEL_ERROR, status);
-
-TokenRequest tokenrequest = TokenRequest_init_default;
-TokenResponse tokenresponse = TokenResponse_init_default;
-uint8_t bufferRequest[TokenRequest_size];
-uint8_t bufferResponse[TokenResponse_size];
-//WiFiClient wifiClientToken; //Check later the secure version!
-//WiFiClientSecure wifiClientToken;
-//wifiClientToken.setInsecure();
-
-String mac = WiFi.macAddress();
-std::copy(std::begin(mac), std::end(mac), tokenrequest.client_id);
-
-pb_ostream_t stream_out = pb_ostream_from_buffer(bufferRequest, sizeof(bufferRequest));
-if (pb_encode(&stream_out, TokenRequest_fields, &tokenrequest)){// && wifiClientToken.connect(ENERGYLEAF_HOST,ENERGYLEAF_PORT)) {
-  /*wifiClientToken.printf_P(ENERGYLEAF_POST_AUTH, ENERGYLEAF_HOST, stream_out.bytes_written);
-  wifiClientToken.write(bufferRequest, stream_out.bytes_written);
-
-  String line = "";
-  char contentType[30];
-  bool contentTypeFound = false;
-  while (wifiClientToken.connected() || wifiClientToken.available()) {
-    String line = wifiClientToken.readStringUntil('\r');
-    if (line == "\r") {
-      break;
-    }
-    if(!contentTypeFound && line.startsWith(PSTR("Conent-Type:"))) {
-      line.toCharArray(contentType,sizeof(contentType));
-      contentTypeFound = true;
-    }
-  }
-
-  if(contentTypeFound && strstr(contentType,PSTR("application/x-protobuf")) != NULL) {
-    std::size_t bytesRead = wifiClientToken.readBytes(bufferResponse, sizeof(bufferResponse));
-    pb_istream_t stream_in = pb_istream_from_buffer(bufferResponse, bytesRead);
-    wifiClientToken.stop(); // move later
-
-    if (pb_decode(&stream_in, TokenResponse_fields, &tokenresponse)) {
-      if(tokenresponse.status >= 200 && tokenresponse.status <= 299 && tokenresponse.has_access_token && tokenresponse.has_script) {
-        strcpy(access_token, tokenresponse.access_token);
-        expires_in = tokenresponse.expires_in;
-        ENERGYLEAF_ACTIVE = true;
-        //ToDo: set Script!
-        AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: SUCCESSFUL"));
-      } else {
-        ENERGYLEAF_ACTIVE = false;
-        AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL"));
-        AddLog(LOG_LEVEL_ERROR, "ENERGYLEAF_TOKEN_REQUEST_ERROR:");
-        char status[11];
-        snprintf(status,sizeof status, "%", PRIu32, tokenresponse.status);
-        AddLog(LOG_LEVEL_ERROR, status);
-        AddLog(LOG_LEVEL_ERROR, tokenresponse.status_message);
-      }
-    } else {
-      ENERGYLEAF_ACTIVE = false;
-      AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING RESPONSE]"));
-    } 
-  } else {
-      ENERGYLEAF_ACTIVE = false;
-      AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING REQUEST]"));
-  }*/  
-  //wifiClientToken.stop();  
-} else {
-      ENERGYLEAF_ACTIVE = false;
-      AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING REQUEST]"));
-}
-AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: END"));
-//End Auth Energyleaf
-
 
   XdrvXsnsCall(FUNC_INIT);       // FUNC_INIT
 AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: END"));
