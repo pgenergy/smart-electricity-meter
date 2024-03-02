@@ -1341,6 +1341,7 @@ if(!ENERGYLEAF_ACTIVE) {
 
     String mac = WiFi.macAddress();
     std::copy(std::begin(mac), std::end(mac), tokenrequest.client_id); 
+    tokenrequest.type = ENERGYLEAF_SENSORTYPE;
 
     pb_ostream_t stream_out = pb_ostream_from_buffer(bufferRequest, sizeof(bufferRequest));
 
@@ -1362,6 +1363,8 @@ if(!ENERGYLEAF_ACTIVE) {
       char header[128];
       char headerStatus[4];
       bool contentTypeFound = false;
+      bool chunked = false;
+      uint16_t bodySize = 0;
       while(true){
         int l = wifiClientToken->readBytesUntil('\n',header,sizeof(header));
         if(l==1){
@@ -1373,59 +1376,88 @@ if(!ENERGYLEAF_ACTIVE) {
           headerStatus[3] = '\0';
           uint16_t headerStatusCode = atoi(headerStatus);
           if(headerStatusCode >= 200 && headerStatusCode <= 299) {
-            AddLog(LOG_LEVEL_INFO,PSTR("Good Header Status: %d"),headerStatusCode);
+            AddLog(LOG_LEVEL_DEBUG,PSTR("Good Header Status: %d"),headerStatusCode);
           } else {
-            AddLog(LOG_LEVEL_ERROR,PSTR("Bad Header Status: %d"),headerStatusCode);
+            AddLog(LOG_LEVEL_DEBUG,PSTR("Bad Header Status: %d"),headerStatusCode);
           }
-
+        }
+        if(strstr(header,"Transfer-Encoding: chunked")) {
+          chunked = true;
+        }
+        if(strstr(header,"Content-Length:")) {
+          char contentLength[4];
+          strncpy(headerStatus,&header[16],3);
+          contentLength[3] = '\0';
+          bodySize = atoi(contentLength);
         }
         if(strstr(header,"Content-Type: application/x-protobuf")) {
           contentTypeFound = true;
         }
-        AddLog(LOG_LEVEL_INFO,PSTR("Header: %s"),header);
+        AddLog(LOG_LEVEL_DEBUG,PSTR("Header: %s"),header);
       }
 
       if(contentTypeFound) {
-      char body[40];
-        std::size_t bytesRead = wifiClientToken->readBytes(body, sizeof(body));
-        AddLog(LOG_LEVEL_INFO,PSTR("body: %s"),body);
-        for (int i = 0; i < bytesRead; ++i) {
-          AddLog(LOG_LEVEL_INFO,PSTR("body:%02X"),body[i]);
+        int currentSize = 0;
+        if(chunked) {
+          char chunkSize[16];
+          while(true) {
+            int l = wifiClientToken->readBytesUntil('\n',chunkSize,sizeof(chunkSize));
+            if(l==1){
+              break;
+            }
+            chunkSize[l-1] = 0;
+            int _chunkSize = strtol(chunkSize, NULL, 16); 
+            char chunkData[_chunkSize];
+            l = wifiClientToken->readBytesUntil('\n',chunkData,sizeof(chunkData));
+            if(l==1){
+              break;
+            }
+            if(strstr(chunkData,"0")) {
+              break;
+            }
+            if(currentSize + l <= TokenResponse_size){
+              memcpy(bufferResponse + currentSize, chunkData, l);
+              currentSize += l;
+            } else {
+              AddLog(LOG_LEVEL_ERROR,PSTR("Not enough space for data"));
+            }
+          }
+        } else {
+          currentSize = bodySize;
+          while(true) {
+            int l = wifiClientToken->readBytesUntil('\n',bufferResponse,currentSize);
+            if(l==1){
+              break;
+            }
+          }
         }
-        pb_istream_t stream_in = pb_istream_from_buffer(bufferResponse, bytesRead);
-  AddLog(LOG_LEVEL_INFO,PSTR("Bytes read: %d"),bytesRead);
-       
+        AddLog(LOG_LEVEL_DEBUG,PSTR("Body-Final-Data: %s"),bufferResponse);
+        pb_istream_t stream_in = pb_istream_from_buffer(bufferResponse, currentSize);    
         
-
-        //if (pb_decode(&stream_in, TokenResponse_fields, &tokenresponse)) {
-          /*if(tokenresponse.status >= 200 && tokenresponse.status <= 299 && tokenresponse.has_access_token && tokenresponse.has_script) {
+        if (pb_decode(&stream_in, TokenResponse_fields, &tokenresponse)) {
+          if(tokenresponse.status >= 200 && tokenresponse.status <= 299 && tokenresponse.has_access_token && tokenresponse.has_script) {
             strcpy(access_token, tokenresponse.access_token);
             expires_in = tokenresponse.expires_in;
             ENERGYLEAF_ACTIVE = true;
             //ToDo: set Script!
-            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: SUCCESSFUL"));*/
-          //} else {
-            /*ENERGYLEAF_ACTIVE = false;
-            AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL"));
-            AddLog(LOG_LEVEL_ERROR, "ENERGYLEAF_TOKEN_REQUEST_ERROR:");
-            char status[11];
-            snprintf(status,sizeof status, "%", PRIu32, tokenresponse.status);
-            AddLog(LOG_LEVEL_ERROR, status);
-            AddLog(LOG_LEVEL_ERROR, tokenresponse.status_message);*/
-          //}
-        //} else {
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: SUCCESSFUL"));
+          } else {
+            //ENERGYLEAF_ACTIVE = false;
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL"));
+            AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_TOKEN_REQUEST_ERROR: %s [%d]"),tokenresponse.status_message,tokenresponse.status);
+          }
+        } else {
           //ENERGYLEAF_ACTIVE = false;
-          //AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING RESPONSE]"));
-        //} 
+          AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING RESPONSE]"));
+        } 
       } else {
         //ENERGYLEAF_ACTIVE = false;
-        AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING REQUEST]"));
+        AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING REQUEST]"));
       } 
-     // wifiClientToken.stop(); 
       wifiClientToken->stop(); 
     } else {
       //ENERGYLEAF_ACTIVE = false;
-      AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING REQUEST]"));
+      AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING REQUEST]"));
     }
   } else {
     AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: No WiFi - No Request can be send!"));
