@@ -52,6 +52,7 @@ const char PROGMEM ENERGYLEAF_POST_AUTH[] = "POST /api/v1/token HTTP/1.1\r\n"
 const SensorType PROGMEM ENERGYLEAF_SENSORTYPE = SensorType_DIGITAL_ELECTRICITY; 
 
 bool ENERGYLEAF_ACTIVE = false;    
+bool ENERGYLEAF_INIT = false;
 char access_token[45];       
 uint32_t expires_in;     
 
@@ -1322,8 +1323,6 @@ void PerformEverySecond(void)
 if(!ENERGYLEAF_ACTIVE) {
   if(!ENERGYLEAF_X509A_LOADED){
     wifiClientToken = new BearSSL::WiFiClientSecure_light(1024,1024);
-    //BearSSL::X509List x509Energyleaf(ENERGYLEAF_X509CA);
-    //wifiClientToken->setTrustAnchors(&x509Energyleaf);
     wifiClientToken->setTrustAnchor(&TAs,1);
     ENERGYLEAF_X509A_LOADED = true;
   }
@@ -1342,6 +1341,12 @@ if(!ENERGYLEAF_ACTIVE) {
     String mac = WiFi.macAddress();
     std::copy(std::begin(mac), std::end(mac), tokenrequest.client_id); 
     tokenrequest.type = ENERGYLEAF_SENSORTYPE;
+
+    if(!ENERGYLEAF_INIT){
+      ENERGYLEAF_INIT = true;
+      //Only on fresh init a check should be done if the script needed to be reloaded.
+      tokenrequest.need_script = true;
+    }
 
     pb_ostream_t stream_out = pb_ostream_from_buffer(bufferRequest, sizeof(bufferRequest));
 
@@ -1399,23 +1404,31 @@ if(!ENERGYLEAF_ACTIVE) {
       if(contentTypeFound) {
         int currentSize = 0;
         if(chunked) {
-          char chunkSize[16];
           while(true) {
+            char chunkSize[16];
             int l = wifiClientToken->readBytesUntil('\n',chunkSize,sizeof(chunkSize));
-            if(l==1){
+            if(l<=0){
               break;
             }
+            //AddLog(LOG_LEVEL_DEBUG,PSTR("Body-Data (chunkSize): %s"),chunkSize);
+
             chunkSize[l-1] = 0;
             int _chunkSize = strtol(chunkSize, NULL, 16); 
+
+            if(_chunkSize==0){
+              break;
+            }
+
             char chunkData[_chunkSize];
-            l = wifiClientToken->readBytesUntil('\n',chunkData,sizeof(chunkData));
-            if(l==1){
+            l = wifiClientToken->readBytes(chunkData,_chunkSize);
+            if(l<=0){
               break;
             }
-            if(strstr(chunkData,"0")) {
-              break;
-            }
+
+            //AddLog(LOG_LEVEL_DEBUG,PSTR("Body-Data (chunkData): %s"),chunkData);
+
             if(currentSize + l <= TokenResponse_size){
+              //AddLog(LOG_LEVEL_DEBUG,PSTR("Body-Data: %s with %d at %d"),chunkData,currentSize,currentSize + l);
               memcpy(bufferResponse + currentSize, chunkData, l);
               currentSize += l;
             } else {
@@ -1431,7 +1444,7 @@ if(!ENERGYLEAF_ACTIVE) {
             }
           }
         }
-        AddLog(LOG_LEVEL_DEBUG,PSTR("Body-Final-Data: %s"),bufferResponse);
+
         pb_istream_t stream_in = pb_istream_from_buffer(bufferResponse, currentSize);    
         
         if (pb_decode(&stream_in, TokenResponse_fields, &tokenresponse)) {
@@ -1441,6 +1454,10 @@ if(!ENERGYLEAF_ACTIVE) {
             ENERGYLEAF_ACTIVE = true;
             //ToDo: set Script!
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: SUCCESSFUL"));
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: [TOKEN:%s]"),tokenresponse.access_token);
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: [STATUS:%d]"),tokenresponse.status);
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: [SCRIPT:%s]"),tokenresponse.has_script ? "true" : "false");
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: [SCRIPT:%s]"),tokenresponse.script);
           } else {
             //ENERGYLEAF_ACTIVE = false;
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL"));
@@ -1449,7 +1466,7 @@ if(!ENERGYLEAF_ACTIVE) {
         } else {
           //ENERGYLEAF_ACTIVE = false;
           AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING RESPONSE]"));
-        } 
+        }
       } else {
         //ENERGYLEAF_ACTIVE = false;
         AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: UNSUCCESSFUL [ERROR DURING REQUEST]"));
