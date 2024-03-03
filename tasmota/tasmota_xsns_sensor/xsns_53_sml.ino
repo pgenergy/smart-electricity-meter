@@ -2496,7 +2496,7 @@ void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
           // immediate mqtt
           DOUBLE2CHAR(sml_globs.meter_vars[index], dp & 0xf, tpowstr);
           if(strcmp(jname,EL_KEY) == 0) {
-            SensorDataRequest msg = SensorDataRequest_init_default;
+            /*SensorDataRequest msg = SensorDataRequest_init_default;
             uint8_t vBuffer[SensorDataRequest_size];
             strcpy(msg.access_token, access_token);
             msg.value = strtof(tpowstr,nullptr);
@@ -2507,7 +2507,7 @@ void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
               espClientEL.write(vBuffer, stream.bytes_written);
               espClientEL.stop();
               //ToDo: Get the Response: SensorDataResponse
-            }
+            }*/
           } else {
             ResponseTime_P(PSTR(",\"%s\":{\"%s\":%s}}"), sml_globs.mp[mindex].prefix, jname, tpowstr);
             MqttPublishTeleSensor();

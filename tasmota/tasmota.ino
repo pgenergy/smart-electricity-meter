@@ -768,7 +768,6 @@ void setup(void) {
 #endif  // ESP8266
 
   XdrvXsnsCall(FUNC_INIT);       // FUNC_INIT
-AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_TOKEN_REQUEST: END"));
 #ifdef USE_SCRIPT
   if (bitRead(Settings->rule_enabled, 0)) Run_Scripter(">BS",3,0);
 #endif

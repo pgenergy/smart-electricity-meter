@@ -532,8 +532,13 @@ bool (* const xdrv_func_ptr[])(uint32_t) = {   // Driver Function Pointers
 #endif
 
 #ifdef XDRV_128
-  &Xdrv128
+  &Xdrv128,
 #endif
+
+#ifdef XDRV_159
+  &Xdrv159
+#endif
+
 };
 
 const uint8_t xdrv_present = sizeof(xdrv_func_ptr) / sizeof(xdrv_func_ptr[0]);  // Number of drivers found
@@ -1057,7 +1062,11 @@ const uint8_t kXdrvList[] = {
 #endif
 
 #ifdef XDRV_128
-  XDRV_128
+  XDRV_128,
+#endif
+
+#ifdef XDRV_159
+  XDRV_159
 #endif
 };
 

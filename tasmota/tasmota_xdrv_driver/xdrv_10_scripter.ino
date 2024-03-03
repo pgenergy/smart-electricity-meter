@@ -633,7 +633,6 @@ int32_t script_logfile_write(char *path, char *payload, uint32_t size);
 void script_sort_array(TS_FLOAT *array, uint16_t size);
 
 void ScriptEverySecond(void) {
-
   if (bitRead(Settings->rule_enabled, 0)) {
     struct T_INDEX *vtp = glob_script_mem.type;
     TS_FLOAT delta = (millis() - glob_script_mem.script_lastmillis) / 1000.0;
