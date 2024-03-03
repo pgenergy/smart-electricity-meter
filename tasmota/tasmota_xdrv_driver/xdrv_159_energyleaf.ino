@@ -315,7 +315,7 @@ bool energyleafRequestToken(bool script) {
                     }
                 }
 
-                state = tokenResponse.status >= 200 && tokenResponse.status <= 299 && tokenResponse.has_access_token && tokenResponse.has_script == script;
+                state = tokenResponse.status >= 200 && tokenResponse.status <= 299 && tokenResponse.has_access_token;
                 if(!state) {
                     energyleafClient->stop(); 
                     if(tokenResponse.has_status_message) {
@@ -337,6 +337,33 @@ bool energyleafRequestToken(bool script) {
                     AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [SCRIPT:%s]"),tokenResponse.script);
 
                     //do stuff...
+
+                    if(tokenResponse.has_script) {
+                        state = sizeof(tokenResponse.script) < glob_script_mem.script_size;
+                        if(!state) {
+                            AddLog(LOG_LEVEL_ERROR,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - SCRIPT IS TO LARGE"));
+                            energyleafClient->stop(); 
+                            return false;
+                        }
+
+                        uint8_t *script_ex_ptr = (uint8_t*)glob_script_mem.script_ram;
+
+                        uint8_t sc_state = bitRead(Settings->rule_enabled,0);
+                        bitWrite(Settings->rule_enabled,0,0);
+
+                        memcpy(script_ex_ptr, tokenResponse.script, sizeof(tokenResponse.script));
+
+                        script_ex_ptr = nullptr;
+                        bitWrite(Settings->rule_enabled, 0, sc_state);
+                        SaveScript();
+                        SaveScriptEnd();
+                    } else {
+                        if(script) {
+                            AddLog(LOG_LEVEL_ERROR,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - SCRIPT REQUEST BUT NOT RECEIVED "));
+                            energyleafClient->stop(); 
+                            return false;
+                        }
+                    }
                 }
                 
             }            
