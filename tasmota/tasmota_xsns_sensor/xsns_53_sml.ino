@@ -2463,8 +2463,6 @@ nextsect:
   }
 }
 
-const char PROGMEM EL_KEY[] = "energyleaf_wh";
-
 //"1-0:1.8.0*255(@1," D_TPWRIN ",kWh," DJ_TPWRIN ",4|"
 void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
   char tpowstr[32];
@@ -2495,24 +2493,13 @@ void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
         if (dp & 0x10) {
           // immediate mqtt
           DOUBLE2CHAR(sml_globs.meter_vars[index], dp & 0xf, tpowstr);
-          if(strcmp(jname,EL_KEY) == 0) {
-            /*SensorDataRequest msg = SensorDataRequest_init_default;
-            uint8_t vBuffer[SensorDataRequest_size];
-            strcpy(msg.access_token, access_token);
-            msg.value = strtof(tpowstr,nullptr);
-            msg.type = ENERGYLEAF_SENSORTYPE;
-            pb_ostream_t stream = pb_ostream_from_buffer(vBuffer, sizeof(vBuffer));
-            if (pb_encode(&stream, SensorDataRequest_fields, &msg) && espClientEL.connect(ENERGYLEAF_HOST,ENERGYLEAF_PORT)) {
-              espClientEL.printf_P(ENERGYLEAF_POST_DATA, ENERGYLEAF_HOST, stream.bytes_written);
-              espClientEL.write(vBuffer, stream.bytes_written);
-              espClientEL.stop();
-              //ToDo: Get the Response: SensorDataResponse
-            }*/
+          if(strcmp(jname,ENERGYLEAF_DATANAME) == 0) {
+            energyleaf_mem.value = strtof(tpowstr,nullptr);
+            energyleafSendData();
           } else {
             ResponseTime_P(PSTR(",\"%s\":{\"%s\":%s}}"), sml_globs.mp[mindex].prefix, jname, tpowstr);
             MqttPublishTeleSensor();
           }
-
         }
       }
     }

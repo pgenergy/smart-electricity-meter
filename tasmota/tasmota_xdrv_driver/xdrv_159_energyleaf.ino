@@ -81,6 +81,8 @@ const br_x509_trust_anchor TAs PROGMEM  = {
     };
 const uint8_t TA_SIZE PROGMEM = 1;
 
+const char ENERGYLEAF_DATANAME[] PROGMEM = "ENERGYLEAF_KWH";
+
 const char ENERGYLEAF_HOST[] = "admin.energyleaf.de";
 const uint16_t ENERGYLEAF_PORT = 443;
 const char ENERGYLEAF_POST_DATA[] PROGMEM = "POST /api/v1/sensor_input HTTP/1.1\r\n"
@@ -104,6 +106,10 @@ struct ENERGYLEAF_STATE {
     const SensorType type = SensorType_DIGITAL_ELECTRICITY;                   
 } energyleaf;
 
+struct ENERGYLEAF_MEM {
+    float value = 0;
+} energyleaf_mem;
+
 BearSSL::WiFiClientSecure_light *energyleafClient = nullptr;
 
 void energyleafInit(void) {
@@ -126,7 +132,15 @@ void energyleafInit(void) {
     //energyleafRequestToken(energyleaf.needScript);
 }
 
-bool energyleafRequestToken(bool script) {
+void energyleafSendData() {
+    //call energyleafSendDataIntern
+}
+
+bool energyleafSendDataIntern() {
+
+}
+
+bool energyleafRequestTokenIntern(bool script) {
     /**
      * Function flows:
      * [script = true && initial = true & expired = UNKNOWN] Prepare TokenRequest -> Send TokenRequest -> Receive Header & Body -> Generate TokenResponse -> Verify -> Save Script -> Prepare ScriptAcceptedRequest -> Send ScriptAcceptedRequest -> Receive Header & Body -> Generate ScriptAcceptedResponse -> Verify (what should happen?)
@@ -571,7 +585,7 @@ bool tryT = false;
 void energyleafEverySecond(void) {
     if(!tryT) {
         AddLog(LOG_LEVEL_INFO, PSTR("EV SEC"));
-        tryT = energyleafRequestToken(energyleaf.needScript);
+        tryT = energyleafRequestTokenIntern(energyleaf.needScript);
     }
 }
 
