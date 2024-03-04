@@ -93,10 +93,6 @@ const char ENERGYLEAF_POST_AUTH[] PROGMEM = "POST /api/v1/token HTTP/1.1\r\n"
                                      "Content-Type: application/x-protobuf\r\n"
                                      "Content-Length: %d\r\n\r\n";  
 
-const char ENERGYLEAF_POST_AUTH_TEST[] PROGMEM = "POST /api/v1/token HTTP/1.1\r\n"
-                                     "Host: admin.energyleaf.de\r\n"
-                                     "User-Agent: Energyleaf-Sensor\r\n\r\n";  
-
 
 struct ENERGYLEAF_STATE {
     bool active = false;    
@@ -131,6 +127,13 @@ void energyleafInit(void) {
 }
 
 bool energyleafRequestToken(bool script) {
+    /**
+     * Function flows:
+     * [script = true && initial = true & expired = UNKNOWN] Prepare TokenRequest -> Send TokenRequest -> Receive Header & Body -> Generate TokenResponse -> Verify -> Save Script -> Prepare ScriptAcceptedRequest -> Send ScriptAcceptedRequest -> Receive Header & Body -> Generate ScriptAcceptedResponse -> Verify (what should happen?)
+     * [script = true && initial = false & expired = REGARDLESS] Prepare TokenRequest -> Send TokenRequest -> Receive Header & Body -> Generate TokenResponse -> Verify -> Save Script -> Prepare ScriptAcceptedRequest -> Send ScriptAcceptedRequest -> Receive Header & Body -> Generate ScriptAcceptedResponse -> Verify (what should happen?) (did this need a ScriptAccepted?)
+     * [script = false && initial = true & expired = UNKNOWN] Prepare TokenRequest -> Send TokenRequest -> Receive Header & Body -> Generate TokenResponse -> Verify -> (if Script available) Save Script -> Prepare ScriptAcceptedRequest -> Send ScriptAcceptedRequest -> Receive Header & Body -> Generate ScriptAcceptedResponse -> Verify (what should happen?) (did this need a ScriptAccepted?)
+     * [script = false && initial = false & expired = REGARDLESS] Prepare TokenRequest -> Send TokenRequest -> Receive Header & Body -> Generate TokenResponse -> Verify -> (if Script available) Save Script -> Prepare ScriptAcceptedRequest -> Send ScriptAcceptedRequest -> Receive Header & Body -> Generate ScriptAcceptedResponse -> Verify (what should happen?) (did this need a ScriptAccepted?)
+     */
     if(energyleafClient) {
         //fresh start and the default script is loaded, not the script of the sensor.
         AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: PREPARING REQUEST FOR TOKEN%s"),script ? " AND SCRIPT" : "");
@@ -141,6 +144,7 @@ bool energyleafRequestToken(bool script) {
             bool chunked = false;
             uint16_t bodySize = 0;
             {  
+                //Prepare TokenRequest
                 uint8_t bufferTokenRequest[TokenRequest_size];
                 pb_ostream_t streamTokenRequestOut;
                 {
@@ -168,6 +172,7 @@ bool energyleafRequestToken(bool script) {
 
                 AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: pb_encode successful"));
 
+                //Send TokenRequest and process received header
                 {
                     state = energyleaf.certLoaded && energyleafClient->connect(ENERGYLEAF_HOST,ENERGYLEAF_PORT);
                     if(!state) {
@@ -246,7 +251,11 @@ bool energyleafRequestToken(bool script) {
                 }
             }
 
+            uint8_t bufferScriptAcceptedRequest[ScriptAcceptedRequest_size];
+            pb_ostream_t streamScriptAcceptedRequestOut;
+
             {
+                //Process received body and generate TokenResponse from it
                 TokenResponse tokenResponse = TokenResponse_init_default;
                 {
                     uint8_t bufferTokenResponse[TokenResponse_size];
@@ -326,17 +335,17 @@ bool energyleafRequestToken(bool script) {
                     return false;
                 }
 
+                //Store Script and the Parameter from the TokenResponse
                 {
-                    strcpy(energyleaf.access_token, tokenResponse.access_token);
-                    energyleaf.expires_in = tokenResponse.expires_in;
-
                     AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: SUCCESSFUL"));
                     AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [TOKEN:%s]"),tokenResponse.access_token);
                     AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [STATUS:%d]"),tokenResponse.status);
                     AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [SCRIPT:%s]"),tokenResponse.has_script ? "true" : "false");
                     AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [SCRIPT:%s]"),tokenResponse.script);
 
-                    //do stuff...
+                    
+                    strcpy(energyleaf.access_token, tokenResponse.access_token);
+                    energyleaf.expires_in = tokenResponse.expires_in;
 
                     if(tokenResponse.has_script) {
                         state = sizeof(tokenResponse.script) < glob_script_mem.script_size;
@@ -364,6 +373,185 @@ bool energyleafRequestToken(bool script) {
                             return false;
                         }
                     }
+                }
+
+                //Prepare ScriptAcceptedRequest
+                {
+                    ScriptAcceptedRequest scriptAcceptedRequest = ScriptAcceptedRequest_init_default;
+
+                    memcpy(scriptAcceptedRequest.access_token, energyleaf.access_token, sizeof(energyleaf.access_token));
+
+                    streamScriptAcceptedRequestOut = pb_ostream_from_buffer(bufferScriptAcceptedRequest, sizeof(bufferScriptAcceptedRequest));
+
+                    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: Creating SAR-Package"));
+                
+                    state = pb_encode(&streamScriptAcceptedRequestOut,ScriptAcceptedRequest_fields, &scriptAcceptedRequest);
+                }
+
+                if(!state) {
+                    AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - COULD NOT CREATE SAR-PACKAGE"));
+                    return false;
+                }
+
+                AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: pb_encode successful"));
+
+                //Send ScriptAcceptedRequest and process received header
+                {
+                    state = energyleaf.certLoaded && energyleafClient->connected();
+                    if(!state) {
+                        if(energyleafClient->connected()){
+                            energyleafClient->stop(); 
+                        }
+                        AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - COULD NOT HOLD CONNECTION TO SERVICE"));
+                        return false;
+                    }
+
+                    energyleafClient->write("POST /api/v1/script_accepted HTTP/1.1\r\n");
+                    energyleafClient->write("Host: ");
+                    energyleafClient->write(ENERGYLEAF_HOST);
+                    energyleafClient->write("\r\n");
+                    energyleafClient->write("Content-Type: application/x-protobuf\r\n");
+                    energyleafClient->write("Content-Length: ");
+                    energyleafClient->print(streamScriptAcceptedRequestOut.bytes_written);
+                    energyleafClient->write("\r\n\r\n");
+
+                    energyleafClient->write(bufferScriptAcceptedRequest, streamScriptAcceptedRequestOut.bytes_written);
+
+                    char header[128];
+                    char headerStatus[4];
+                    state = false;
+
+                    while(true) {
+                        int l = energyleafClient->readBytesUntil('\n',header,sizeof(header));
+                        if(l<=1) {
+                            break;
+                        }
+
+                        header[l-1] = 0;
+
+                        AddLog(LOG_LEVEL_DEBUG,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST_Header: %s"),header);
+
+                        if(strstr(header,"HTTP/1.1")) {
+                            strncpy(headerStatus,&header[9],3);
+                            headerStatus[3] = '\0';
+                            uint16_t headerStatusCode = atoi(headerStatus);
+                            if(headerStatusCode >= 200 && headerStatusCode <= 299) {
+                                AddLog(LOG_LEVEL_DEBUG,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: GOT A %d STATUS"),headerStatusCode);
+                            } else {
+                                AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - GOT A %d STATUS"),headerStatusCode);
+                                //which code indicates no connection or did we need that?
+                            }
+                            continue;
+                        }
+
+                        if(strstr(header,"Content-Length:")){
+                            char contentLength[4];
+                            strncpy(contentLength,&header[16],3);
+                            contentLength[3] = '\0';
+                            bodySize = atoi(contentLength);
+                            chunked = false;
+                            continue;
+                        }
+
+                        if(strstr(header,"Transfer-Encoding: chunked")) {
+                            chunked = true;
+                            continue;
+                        }
+
+                        if(strstr(header,"Content-Type: application/x-protobuf")) {
+                            state = true;
+                            continue;
+                        }
+                    }
+                }
+
+                if(!state) {
+                    energyleafClient->stop(); 
+                    AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - GOT WRONG CONTENT-TYPE FROM SERVICE"));
+                    return false;
+                }
+            }
+
+            {
+                //Process received body and generate ScriptAcceptedResponse from it
+                ScriptAcceptedResponse scriptAcceptedResponse = ScriptAcceptedResponse_init_default;
+                {
+                    uint8_t bufferScriptAcceptedResponse[ScriptAcceptedResponse_size];
+                    int currentSize = 0;
+                    {
+                        if(chunked) {
+                            while(true) {
+                                char chunkSize[16];
+                                int l = energyleafClient->readBytesUntil('\n',chunkSize,sizeof(chunkSize));
+                                if(l<=0) {
+                                    break;
+                                }
+
+                                chunkSize[l-1] = 0;
+                                int chunkSizeI = strtol(chunkSize,NULL,16);
+
+                                if(chunkSizeI == 0) {
+                                    break;
+                                }
+
+                                char chunkData[chunkSizeI];
+                                l = energyleafClient->readBytes(chunkData,chunkSizeI);
+                                if(l<=0) {
+                                    break;
+                                }
+
+                                if(currentSize + l <= ScriptAcceptedResponse_size) {
+                                    memcpy(bufferScriptAcceptedRequest + currentSize, chunkData, l);
+                                    currentSize += l;
+                                } else {
+                                    AddLog(LOG_LEVEL_ERROR,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - NOT ENOUGH SPACE FOR DATA"));
+                                    energyleafClient->stop(); 
+                                    return false;
+                                }
+                            }
+                        } else {
+                            //currently not tested, therefore better use chunked data
+                            currentSize = bodySize;
+                            while(true) {
+                                int l = energyleafClient->readBytesUntil('\n',bufferScriptAcceptedRequest,currentSize);
+                                if(l==1) {
+                                    break;
+                                }
+                            }
+                        }
+
+                        state = currentSize > 0;
+                    }
+
+                    if(!state) {
+                        energyleafClient->stop(); 
+                        AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - GOT PACKAGE WITH WRONG SIZE [SIZE:%d]"),currentSize);
+                        return false;
+                    }
+
+                    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [SIZE:%d]"),currentSize);
+
+                    {
+                        pb_istream_t streamScriptAcceptedResponseIn = pb_istream_from_buffer(bufferScriptAcceptedResponse,currentSize);
+                        state = pb_decode(&streamScriptAcceptedResponseIn,ScriptAcceptedResponse_fields, &scriptAcceptedResponse);
+                    }
+
+                    if(!state) {
+                        energyleafClient->stop(); 
+                        AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - GOT WRONG CONTENT-TYPE FROM SERVICE"));
+                        return false;
+                    }
+                }
+
+                state = scriptAcceptedResponse.status >= 200 && scriptAcceptedResponse.status <= 299;
+                if(!state) {
+                    energyleafClient->stop(); 
+                    if(scriptAcceptedResponse.has_status_message) {
+                        AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - ERROR WITH %d STATUS [%s]"),scriptAcceptedResponse.status, scriptAcceptedResponse.status_message);
+                    } else {
+                        AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - ERROR WITH %d STATUS"),scriptAcceptedResponse.status);
+                    }
+                    return false;
                 }
                 
             }            
