@@ -122,7 +122,7 @@ void energyleafInit(void) {
             energyleafClient->setTrustAnchor(&TAs,TA_SIZE);
             energyleaf.certLoaded = true;
         }
-        if(strstr(glob_script_mem.script_ram,">D\nscript error must start with >D")) {
+        if(strstr_P(glob_script_mem.script_ram,PSTR(">D\nscript error must start with >D"))) {
             AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER: DEFAULT SCRIPT IS LOADED - NEED TO LOAD SCRIPT FOR THIS SENSOR"));
             energyleaf.needScript = true;
         }
@@ -199,14 +199,14 @@ bool energyleafRequestTokenIntern(bool script) {
 
                     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: CONNECTED TO ENERGYLEAF SERIVCE"));
 
-                    energyleafClient->write("POST /api/v1/token HTTP/1.1\r\n");
-                    energyleafClient->write("Host: ");
+                    energyleafClient->write_P(PSTR("POST /api/v1/token HTTP/1.1\r\n"));
+                    energyleafClient->write_P(PSTR("Host: "));
                     energyleafClient->write(ENERGYLEAF_HOST);
-                    energyleafClient->write("\r\n");
-                    energyleafClient->write("Content-Type: application/x-protobuf\r\n");
-                    energyleafClient->write("Content-Length: ");
+                    energyleafClient->write_P(PSTR("\r\n"));
+                    energyleafClient->write_P(PSTR("Content-Type: application/x-protobuf\r\n"));
+                    energyleafClient->write_P(PSTR("Content-Length: "));
                     energyleafClient->print(streamTokenRequestOut.bytes_written);
-                    energyleafClient->write("\r\n\r\n");
+                    energyleafClient->write_P(PSTR("\r\n\r\n"));
 
                     energyleafClient->write(bufferTokenRequest, streamTokenRequestOut.bytes_written);
 
@@ -224,7 +224,7 @@ bool energyleafRequestTokenIntern(bool script) {
 
                         AddLog(LOG_LEVEL_DEBUG,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST_Header: %s"),header);
 
-                        if(strstr(header,"HTTP/1.1")) {
+                        if(strstr_P(header,PSTR("HTTP/1.1"))) {
                             strncpy(headerStatus,&header[9],3);
                             headerStatus[3] = '\0';
                             uint16_t headerStatusCode = atoi(headerStatus);
@@ -237,7 +237,7 @@ bool energyleafRequestTokenIntern(bool script) {
                             continue;
                         }
 
-                        if(strstr(header,"Content-Length:")){
+                        if(strstr_P(header,PSTR("Content-Length:"))){
                             char contentLength[4];
                             strncpy(contentLength,&header[16],3);
                             contentLength[3] = '\0';
@@ -246,12 +246,12 @@ bool energyleafRequestTokenIntern(bool script) {
                             continue;
                         }
 
-                        if(strstr(header,"Transfer-Encoding: chunked")) {
+                        if(strstr_P(header,PSTR("Transfer-Encoding: chunked"))) {
                             chunked = true;
                             continue;
                         }
 
-                        if(strstr(header,"Content-Type: application/x-protobuf")) {
+                        if(strstr_P(header,PSTR("Content-Type: application/x-protobuf"))) {
                             state = true;
                             continue;
                         }
@@ -420,14 +420,14 @@ bool energyleafRequestTokenIntern(bool script) {
                         return false;
                     }
 
-                    energyleafClient->write("POST /api/v1/script_accepted HTTP/1.1\r\n");
-                    energyleafClient->write("Host: ");
+                    energyleafClient->write_P(PSTR("POST /api/v1/script_accepted HTTP/1.1\r\n"));
+                    energyleafClient->write_P(PSTR("Host: "));
                     energyleafClient->write(ENERGYLEAF_HOST);
-                    energyleafClient->write("\r\n");
-                    energyleafClient->write("Content-Type: application/x-protobuf\r\n");
-                    energyleafClient->write("Content-Length: ");
+                    energyleafClient->write_P(PSTR("\r\n"));
+                    energyleafClient->write_P(PSTR("Content-Type: application/x-protobuf\r\n"));
+                    energyleafClient->write_P(PSTR("Content-Length: "));
                     energyleafClient->print(streamScriptAcceptedRequestOut.bytes_written);
-                    energyleafClient->write("\r\n\r\n");
+                    energyleafClient->write_P(PSTR("\r\n\r\n"));
 
                     energyleafClient->write(bufferScriptAcceptedRequest, streamScriptAcceptedRequestOut.bytes_written);
 
@@ -445,7 +445,7 @@ bool energyleafRequestTokenIntern(bool script) {
 
                         AddLog(LOG_LEVEL_DEBUG,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST_Header: %s"),header);
 
-                        if(strstr(header,"HTTP/1.1")) {
+                        if(strstr_P(header,PSTR("HTTP/1.1"))) {
                             strncpy(headerStatus,&header[9],3);
                             headerStatus[3] = '\0';
                             uint16_t headerStatusCode = atoi(headerStatus);
@@ -458,7 +458,7 @@ bool energyleafRequestTokenIntern(bool script) {
                             continue;
                         }
 
-                        if(strstr(header,"Content-Length:")){
+                        if(strstr_P(header,PSTR("Content-Length:"))){
                             char contentLength[4];
                             strncpy(contentLength,&header[16],3);
                             contentLength[3] = '\0';
@@ -467,12 +467,12 @@ bool energyleafRequestTokenIntern(bool script) {
                             continue;
                         }
 
-                        if(strstr(header,"Transfer-Encoding: chunked")) {
+                        if(strstr_P(header,PSTR("Transfer-Encoding: chunked"))) {
                             chunked = true;
                             continue;
                         }
 
-                        if(strstr(header,"Content-Type: application/x-protobuf")) {
+                        if(strstr_P(header,PSTR("Content-Type: application/x-protobuf"))) {
                             state = true;
                             continue;
                         }
