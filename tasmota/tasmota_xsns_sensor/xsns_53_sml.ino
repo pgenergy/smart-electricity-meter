@@ -2493,7 +2493,7 @@ void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
         if (dp & 0x10) {
           // immediate mqtt
           DOUBLE2CHAR(sml_globs.meter_vars[index], dp & 0xf, tpowstr);
-          if(strcmp(jname,ENERGYLEAF_DATANAME) == 0) {
+          if(strcmp(jname,energyleaf.identifier) == 0) {
             energyleaf_mem.value = strtof(tpowstr,nullptr);
             energyleafSendData();
           } else {
