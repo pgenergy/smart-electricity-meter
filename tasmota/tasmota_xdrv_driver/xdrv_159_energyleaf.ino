@@ -609,6 +609,7 @@ bool energyleafRequestTokenIntern() {
                         memcpy(script_ex_ptr, tokenResponse.script, sizeof(tokenResponse.script));
 
                         script_ex_ptr = nullptr;
+                        //ToDo: set script on active!
                         bitWrite(Settings->rule_enabled, 0, sc_state);
                         SaveScript();
                         SaveScriptEnd();
