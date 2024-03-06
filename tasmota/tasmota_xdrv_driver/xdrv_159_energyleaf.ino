@@ -263,7 +263,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                                 AddLog(LOG_LEVEL_DEBUG,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: GOT A %d STATUS"),headerStatusCode);
                             } else {
                                 AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - GOT A %d STATUS"),headerStatusCode);
-                                //return ENERGYLEAF_ERROR::ERROR;
+                                //return ENERGYLEAF_ERROR::ERROR; //If a special status is known that results in no body here we can return direct
                             }
                             continue;
                         }
@@ -480,7 +480,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern() {
                                 AddLog(LOG_LEVEL_DEBUG,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: GOT A %d STATUS"),headerStatusCode);
                             } else {
                                 AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - GOT A %d STATUS"),headerStatusCode);
-                                //return ENERGYLEAF_ERROR::ERROR;
+                                //return ENERGYLEAF_ERROR::ERROR; //If a special status is known that results in no body here we can return direct
                             }
                             continue;
                         }
