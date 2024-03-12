@@ -704,15 +704,15 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern() {
     }
 }
 #define ENERGYLEAF_TESTTIME 30
-int testCounter = ENERGYLEAF_TESTTIME;
+//int testCounter = ENERGYLEAF_TESTTIME;
 void energyleafEverySecond(void) {
-    if(testCounter > 0) {
+    /*if(testCounter > 0) {
         --testCounter;
     } else {
         testCounter = ENERGYLEAF_TESTTIME;
         energyleaf_mem.value = 10;
         energyleafSendData();
-    }
+    }*/
    if(!energyleaf.active || (energyleaf.active &&  energyleaf.expiresIn <= 0)) {
     //Check whether the sensor is in the initial state (!active) or is active and its counter has expired (expiresIn == 0)
     if(!energyleaf.active && energyleaf.retryCounter == 5){
@@ -729,7 +729,7 @@ void energyleafEverySecond(void) {
     }
    } else {
     --energyleaf.expiresIn;
-    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: DECREASE COUNTER BY ONE [COUNTER:%d]"),energyleaf.expiresIn);
+    //AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: DECREASE COUNTER BY ONE [COUNTER:%d]"),energyleaf.expiresIn);
    }
 }
 

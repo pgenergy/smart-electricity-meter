@@ -2491,11 +2491,13 @@ void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
         cp++;
         uint8_t dp = atoi(cp);
         if (dp & 0x10) {
+          AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: DATA %s"),jname);
           // immediate mqtt
           DOUBLE2CHAR(sml_globs.meter_vars[index], dp & 0xf, tpowstr);
           if(strcmp(jname,energyleaf.identifier) == 0) {
+            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: GOT DATA TO SEND"));
             energyleaf_mem.value = strtof(tpowstr,nullptr);
-            energyleafSendData();
+            //energyleafSendData();
           } else {
             ResponseTime_P(PSTR(",\"%s\":{\"%s\":%s}}"), sml_globs.mp[mindex].prefix, jname, tpowstr);
             MqttPublishTeleSensor();
