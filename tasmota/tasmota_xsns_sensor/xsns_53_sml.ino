@@ -22,12 +22,6 @@
 */
 #ifdef USE_SML_M
 
-#include <WiFiClient.h>
-#include <pb_encode.h>
-#include <include/energyleaf/Energyleaf.pb.h>
-
-WiFiClient espClientEL;    
-
 #define XSNS_53 53
 
 // this driver depends on use USE_SCRIPT !!!
@@ -1796,6 +1790,7 @@ void SML_Decode(uint8_t index) {
       // calculated entry, check syntax
       mp++;
       // do math m 1+2+3
+          AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: TEST %s"),*mp);
       if (*mp == 'm' && !sb_counter) {
         // only every 256 th byte
         // else it would be calculated every single serial byte
@@ -4571,6 +4566,78 @@ void SML_CounterSaveState(void) {
 }
 
 
+//Based on SML_Show
+void SML_Energyleaf(bool print) {
+  char *mp = (char*)sml_globs.meter_p; 
+  char tpowstr[32];
+  char jname[24];
+  int8_t mindex, index = 0;
+  char *cp;
+
+  if (!sml_globs.meters_used) return;
+
+  while(mp != NULL) {
+    if(*mp == 0) break;
+
+    
+    mindex = ((*mp) & 7) - 1;
+    if (mindex < 0 || mindex >= sml_globs.meters_used) mindex = 0;
+    
+    //mp += 2;
+
+    
+    //AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: DATA %s"), mp);
+    SML_Energyleaf_Sensor_Intern((const char*)mp,index,mindex);
+    
+    if (index < sml_globs.maxvars - 1) ++index;
+
+    //mp = strchr(cp, '|');
+    if (mp) ++mp;
+
+  }
+
+
+
+
+  
+}
+
+
+//based on SML_Immediate_MQTT
+void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex) {
+  char tpowstr[32];
+  char jname[24];
+
+  /*char *cp = strchr(mp,',');
+  if(cp) {
+    cp = strchr(++cp,',');
+    if(cp) {
+      cp = strchr(++cp,',');
+      if(cp) {
+        ++cp;
+        for(uint8_t i = 0; i < sizeof(jname); ++i) {
+          if(*cp == ',') {
+            jname[i] = 0;
+            break;
+          }
+          jname[i] = *cp++;
+        }
+        ++cp;
+        uint8_t dp = atoi(cp);
+        if(dp & 0x10) {
+          DOUBLE2CHAR(sml_globs.meter_vars[index], dp & 0xf, tpowstr);
+          AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: DATA "));
+          if(print) {
+
+          } else {
+
+          }
+        }
+      }
+    }
+  }*/
+}
+
 /*********************************************************************************************\
  * Interface
 \*********************************************************************************************/
@@ -4631,6 +4698,12 @@ bool Xsns53(uint32_t function) {
         if (XSNS_53 == XdrvMailbox.index) {
           result = XSNS_53_cmd();
         }
+        break;
+      case FUNC_ENERGYLEAF_PRINT:
+            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: GOT COMMAND"));
+          if (sml_globs.ready) {
+             SML_Energyleaf(true);
+          }
         break;
       case FUNC_SAVE_BEFORE_RESTART:
       case FUNC_SAVE_AT_MIDNIGHT:

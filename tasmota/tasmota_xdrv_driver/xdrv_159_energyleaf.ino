@@ -88,6 +88,7 @@ const uint8_t TA_SIZE PROGMEM = 1;
 
 
 struct ENERGYLEAF_STATE {
+    bool run = false;
     //Initial start of the sensor
     bool initial = false;
     //Current token of the sensor
@@ -113,7 +114,7 @@ struct ENERGYLEAF_STATE {
 } energyleaf;
 
 struct ENERGYLEAF_MEM {
-    float value = 0;
+    float value = 0.f;
 } energyleaf_mem;
 
 BearSSL::WiFiClientSecure_light *energyleafClient = nullptr;
@@ -146,7 +147,12 @@ void energyleafInit(void) {
     
     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER: INIT 2/2"));
     //Try to get the token here already. The script is only sent if it has to be (the endpoint normally knows this). If no network connection is available at this time, a new attempt is made in the next second.
-    energyleaf.active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
+    
+    if(energyleaf.run == true) {
+        energyleaf.active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
+    } else {
+        energyleaf.active = false;
+    }
 
     if(!energyleaf.active) {
         AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER: SENSOR NOT ACTIVE - AUTO RETRY SOON"));
@@ -157,7 +163,7 @@ void energyleafInit(void) {
 
 void energyleafSendData(void) {
     
-    if((!energyleaf.active && energyleaf.retryCounter == 5) || !energyleaf.active){
+    if((!energyleaf.active && energyleaf.retryCounter == 5 && energyleaf.run) || (!energyleaf.active && energyleaf.run)){
         AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: RETRY COUNTER LIMIT REACHED, CHECK FOR PROBLEMS AND RESTART SENSOR IF FIXED [COUNTER:%d]"),energyleaf.retryCounter);
         return;
     }
@@ -703,17 +709,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern() {
         return ENERGYLEAF_ERROR::ERROR; 
     }
 }
-#define ENERGYLEAF_TESTTIME 30
-//int testCounter = ENERGYLEAF_TESTTIME;
+
 void energyleafEverySecond(void) {
-    /*if(testCounter > 0) {
-        --testCounter;
-    } else {
-        testCounter = ENERGYLEAF_TESTTIME;
-        energyleaf_mem.value = 10;
-        energyleafSendData();
-    }*/
-   if(!energyleaf.active || (energyleaf.active &&  energyleaf.expiresIn <= 0)) {
+    if(energyleaf.run == false) return;
+    if(!energyleaf.active || (energyleaf.active &&  energyleaf.expiresIn <= 0)) {
     //Check whether the sensor is in the initial state (!active) or is active and its counter has expired (expiresIn == 0)
     if(!energyleaf.active && energyleaf.retryCounter == 5){
         AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: RETRY COUNTER LIMIT REACHED, CHECK FOR PROBLEMS AND RESTART SENSOR IF FIXED [COUNTER:%d]"),energyleaf.retryCounter);
@@ -737,6 +736,48 @@ void energyleafDevicePower(void) {
     //Currently not used
 }
 
+bool XDRV_159_cmd(void) {
+    bool ret = false;
+    if(XdrvMailbox.data_len > 0) {
+        char *cp = XdrvMailbox.data;
+        if(*cp == 'r') {
+            //RUN
+            if(energyleaf.run == false) {
+                energyleaf.run = true;
+            }
+        } else if(*cp == 's') {
+            //STOP
+            if(energyleaf.run == true) {
+                energyleaf.run = false;
+            }
+        } else if(*cp == 'v') {
+            //VERIFY / TEST
+            if(energyleaf.run == false) {
+                energyleaf_mem.value = 10;
+                energyleafSendData();
+            }
+        } else if(*cp == 'p') {
+            //PRINT
+            cp++;
+            if(*cp == 's') {
+                //SENSOR
+                XsnsXdrvCall(FUNC_ENERGYLEAF_PRINT);
+            } else if(*cp == 'd') {
+                //DRIVER
+                AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: [VALUE:%g]"),energyleaf_mem.value);
+            } else {
+                AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: INCOMPLETE COMMAND USED!"));
+            }
+        } else if(*cp == 'a') {
+            //ADJUST / RESET
+            energyleaf.retryCounter = 0;
+        }
+    } else {
+        ret = true;
+    }
+    return ret;
+}
+
 /*********************************************************************************************\
  * Interface
 \*********************************************************************************************/
@@ -754,9 +795,13 @@ bool Xdrv159(uint32_t function) {
             case FUNC_SET_DEVICE_POWER: 
                 energyleafDevicePower();
             break;
+            case FUNC_COMMAND_DRIVER:
+            if(XdrvMailbox.index == XDRV_159) {
+                result = XDRV_159_cmd();
+            }
+            break;
         }
     }
-
     return result;
 }
 
