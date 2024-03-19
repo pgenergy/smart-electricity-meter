@@ -22,12 +22,6 @@
 */
 #ifdef USE_SML_M
 
-#include <WiFiClient.h>
-#include <pb_encode.h>
-#include <include/energyleaf/Energyleaf.pb.h>
-
-WiFiClient espClientEL;    
-
 #define XSNS_53 53
 
 // this driver depends on use USE_SCRIPT !!!
@@ -2493,13 +2487,15 @@ void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
         if (dp & 0x10) {
           // immediate mqtt
           DOUBLE2CHAR(sml_globs.meter_vars[index], dp & 0xf, tpowstr);
-          if(strcmp(jname,energyleaf.identifier) == 0) {
-            energyleaf_mem.value = strtof(tpowstr,nullptr);
+          if(strcmp(jname,energyleaf.identifier) == 0 && !energyleaf.manual) {
+            energyleaf_mem.value = doubleToFloat(sml_globs.meter_vars[index]);
+            char output[20];
+            dtostrf(energyleaf_mem.value,1,dp,output);
+            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
             energyleafSendData();
-          } else {
-            ResponseTime_P(PSTR(",\"%s\":{\"%s\":%s}}"), sml_globs.mp[mindex].prefix, jname, tpowstr);
-            MqttPublishTeleSensor();
           }
+          ResponseTime_P(PSTR(",\"%s\":{\"%s\":%s}}"), sml_globs.mp[mindex].prefix, jname, tpowstr);
+          MqttPublishTeleSensor();
         }
       }
     }
@@ -4569,6 +4565,78 @@ void SML_CounterSaveState(void) {
 }
 
 
+float doubleToFloat(double value) {
+  volatile float tmp = static_cast<float>(value);
+  return tmp;
+}
+
+//Based on SML_Show
+void SML_Energyleaf(bool print) {
+  char *mp = (char*)sml_globs.meter_p; 
+  int8_t mindex, index = 0;
+
+  if (!sml_globs.meters_used) return;
+  AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("ENERGYLEAF_SENSOR: DATA %s"),mp);
+
+  while(mp != NULL) {
+    if(*mp == 0) break;
+
+    mindex = ((*mp) & 7) - 1;
+    if (mindex < 0 || mindex >= sml_globs.meters_used) mindex = 0;
+    
+    mp += 2;
+
+    SML_Energyleaf_Sensor_Intern((const char*)mp,index,mindex, print);
+    
+    if (index < sml_globs.maxvars - 1) ++index;
+
+    mp = strchr(mp, '|');
+    if (mp) ++mp;
+  }  
+}
+
+
+//based on SML_Immediate_MQTT
+//example: 1,77070100010800ff@1000,Consumption (Total),kWh,ENERGYLEAF_KWH,4
+void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, bool print) {
+  char jname[24];
+
+  char *cp = strchr(mp,',');
+  //cp = ,Consumption (Total),kWh,ENERGYLEAF_KWH,4
+  if(cp) {
+    cp = strchr(++cp,',');
+    //cp = ,kWh,ENERGYLEAF_KWH,4
+    if(cp) {
+      cp = strchr(++cp,',');
+      //cp = ,ENERGYLEAF_KWH,4
+      if(cp) {
+        ++cp;
+        for(uint8_t i = 0; i < sizeof(jname); ++i) {
+          if(*cp == ',') {
+            jname[i] = 0;
+            break;
+          }
+          jname[i] = *cp++;
+        }
+        //jname = ENERGYLEAF_KWH
+        ++cp;
+        if(strcmp(jname,energyleaf.identifier) == 0) {
+          uint8_t dp = atoi(cp);
+          char output[20];
+          dtostrf(sml_globs.meter_vars[index],1,dp,output);
+          if(print) {
+            AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE [%s]"),output);
+          } else {
+            energyleaf_mem.value = doubleToFloat(sml_globs.meter_vars[index]);
+            AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
+            energyleafSendData();
+          }
+        }
+      }
+    }
+  }
+}
+
 /*********************************************************************************************\
  * Interface
 \*********************************************************************************************/
@@ -4628,6 +4696,18 @@ bool Xsns53(uint32_t function) {
       case FUNC_COMMAND_SENSOR:
         if (XSNS_53 == XdrvMailbox.index) {
           result = XSNS_53_cmd();
+        }
+        break;
+      case FUNC_ENERGYLEAF_PRINT:
+        AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: GOT COMMAND TO PRINT DATA!"));
+        if (sml_globs.ready) {
+          SML_Energyleaf(true);
+        }
+        break;
+      case FUNC_ENERGYLEAF_SEND:
+        AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: GOT COMMAND TO SEND DATA!"));
+        if (sml_globs.ready && (energyleaf.manual || energyleaf.debug)) {
+          SML_Energyleaf(false);
         }
         break;
       case FUNC_SAVE_BEFORE_RESTART:
