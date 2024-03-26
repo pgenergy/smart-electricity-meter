@@ -1260,9 +1260,9 @@
  * Safe guard when needed defines are not done in Platformio                                                         *
 \*********************************************************************************************/
 
-//#ifndef OTA_URL
+#ifndef OTA_URL
   #define OTA_URL "https://ota.energyleaf.de/release/sem/tasmota.bin.gz"
-//#endif
+#endif
 
 /*********************************************************************************************\
  * User configurable items override                                                          *
