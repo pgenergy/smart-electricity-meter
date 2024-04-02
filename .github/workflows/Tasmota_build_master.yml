@@ -16,7 +16,7 @@ concurrency:
 jobs:
   safeboot-images:
     runs-on: ubuntu-latest
-    if: github.repository == 'arendst/Tasmota'
+    if: github.repository == 'pgenergy/smart-electricity-meter'
     continue-on-error: true
     strategy:
       matrix:
@@ -56,7 +56,7 @@ jobs:
 
   base-images:
     runs-on: ubuntu-latest
-    if: github.repository == 'arendst/Tasmota'
+    if: github.repository == 'pgenergy/smart-electricity-meter'
     continue-on-error: true
     strategy:
       matrix:
@@ -94,7 +94,7 @@ jobs:
   base32-images:
     needs: safeboot-images
     runs-on: ubuntu-latest
-    if: github.repository == 'arendst/Tasmota'
+    if: github.repository == 'pgenergy/smart-electricity-meter'
     continue-on-error: true
     strategy:
       matrix:
@@ -145,7 +145,7 @@ jobs:
   language-images:
     needs: safeboot-images
     runs-on: ubuntu-latest
-    if: github.repository == 'arendst/Tasmota'
+    if: github.repository == 'pgenergy/smart-electricity-meter'
     continue-on-error: true
     strategy:
       matrix:
@@ -209,14 +209,3 @@ jobs:
           map_all.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  Start_final_copy:
-    needs: Release
-    runs-on: ubuntu-latest
-    steps:
-    - name: Dispatch workflow in arendst/Tasmota-firmware
-      run: |
-         curl -X POST https://api.github.com/repos/arendst/Tasmota-firmware/actions/workflows/fetch_deploy.yml/dispatches \
-         -H 'Accept: application/vnd.github.everest-preview+json' \
-         -u ${{ secrets.API_TOKEN_GITHUB }} \
-         --data '{"ref": "gh_actions"}'
