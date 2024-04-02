@@ -1,7 +1,7 @@
 name: Build_firmware_master
 
 on:
-  workflow_dispatch:      # Start a workflow
+  #workflow_dispatch:      # Start a workflow
   push:
     branches: master
     paths-ignore:
