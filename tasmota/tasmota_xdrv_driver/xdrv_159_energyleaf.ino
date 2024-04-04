@@ -10,7 +10,7 @@
 #endif
 
 #ifndef ENERGYLEAF_AUTOSTART
-#define ENERGYLEAF_AUTOSTART false
+#define ENERGYLEAF_AUTOSTART true
 #endif
 
 #ifndef ENERGYLEAF_MANUALCOUNTER
@@ -830,6 +830,8 @@ bool XDRV_159_cmd(void) {
                 XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
                 ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"MANUAL - SEND\"}}"));
              }
+        } else if(*cp == 'f') {
+            energyleaf.needScript = true;
         } else if(*cp == 'c') {
             //CONFIG
             if(energyleaf.run == true || energyleaf.manual == true || energyleaf.debug == true) {
