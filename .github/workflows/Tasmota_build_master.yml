@@ -91,57 +91,6 @@ jobs:
           name: firmware
           path: ./build_output
 
-  base32-images:
-    needs: safeboot-images
-    runs-on: ubuntu-latest
-    if: github.repository == 'pgenergy/smart-electricity-meter'
-    continue-on-error: true
-    strategy:
-      matrix:
-        variant:
-          - tasmota32
-          - tasmota32-zbbrdgpro
-          - tasmota32-webcam
-          - tasmota32-bluetooth
-          - tasmota32-nspanel
-          - tasmota32-display
-          - tasmota32-ir
-          - tasmota32-lvgl
-          - tasmota32c3
-          - tasmota32c3cdc
-          - tasmota32s2
-          - tasmota32s2cdc
-          - tasmota32s3
-          - tasmota32s3cdc
-          - tasmota32solo1
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: master
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - name: Install dependencies
-        run: |
-          pip install wheel
-          pip install -U platformio
-      - name: Download safeboot firmwares
-        uses: jason2866/download-artifact@v3.0.4
-        with:
-          name: firmware_safeboot
-          path: ./firmware
-      - name: Display downloaded files
-        run: |
-          ls -R ./firmware/
-      - name: Run PlatformIO
-        run: platformio run -e ${{ matrix.variant }}
-      - name: Upload firmware artifacts
-        uses: jason2866/upload-artifact@v2.0.3
-        with:
-          name: firmware
-          path: ./build_output
-
   language-images:
     needs: safeboot-images
     runs-on: ubuntu-latest
@@ -149,7 +98,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        variant: [ tasmota, tasmota32 ]
+        variant: [ tasmota ]
         language: [ AD, AF, BG, BR, CN, CZ, DE, ES, FR, FY, GR, HE, HU, IT, KO, NL, PL, PT, RO, RU, SE, SK, TR, TW, UK, VN ]
     steps:
       - uses: actions/checkout@v4
@@ -180,7 +129,7 @@ jobs:
           path: ./build_output
 
   Release:
-    needs: [base-images, base32-images, language-images]
+    needs: [base-images, language-images]
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
