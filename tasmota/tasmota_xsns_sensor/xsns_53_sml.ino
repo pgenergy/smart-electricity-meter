@@ -4566,7 +4566,7 @@ void SML_CounterSaveState(void) {
 
 
 float doubleToFloat(double value) {
-  volatile float tmp = static_cast<float>(value);
+  float tmp = static_cast<float>(value);
   return tmp;
 }
 
