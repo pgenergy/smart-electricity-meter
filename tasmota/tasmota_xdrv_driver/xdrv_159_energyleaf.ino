@@ -143,7 +143,7 @@ BearSSL::WiFiClientSecure_light *energyleafClient = nullptr;
 void energyleafInit(void);
 void energyleafSendData(void);
 ENERGYLEAF_ERROR energyleafSendDataIntern(void);
-ENERGYLEAF_ERROR energyleafRequestTokenIntern();
+ENERGYLEAF_ERROR energyleafRequestTokenIntern(void);
 bool XDRV_159_cmd(void);
 
 void energyleafInit(void) {
@@ -189,6 +189,10 @@ void energyleafSendData(void) {
     }
     if((!energyleaf.active && energyleaf.retryCounter == 5 && (energyleaf.run || energyleaf.manual || energyleaf.debug)) || (!energyleaf.active && (energyleaf.run || energyleaf.manual || energyleaf.debug))){
         AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: RETRY COUNTER LIMIT REACHED, CHECK FOR PROBLEMS AND RESTART SENSOR IF FIXED [COUNTER:%d]"),energyleaf.retryCounter);
+        return;
+    }
+    if(energyleaf_mem.value == 0.f) {
+        AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: Sensor wanted to send 0.f values"));
         return;
     }
     //call energyleafSendDataIntern
@@ -428,7 +432,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
     }
 }
 
-ENERGYLEAF_ERROR energyleafRequestTokenIntern() {
+ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
     if(!energyleaf.run && !energyleaf.manual && !energyleaf.debug) {
         return ENERGYLEAF_ERROR::RET;
     }
