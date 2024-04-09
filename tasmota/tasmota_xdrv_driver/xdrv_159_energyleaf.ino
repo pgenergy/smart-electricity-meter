@@ -9,12 +9,16 @@
 #define ENERGYLEAF_KEYWORD "ENERGYLEAF_KWH"
 #endif
 
-#ifndef ENERGYLEAF_AUTOSTART
-#define ENERGYLEAF_AUTOSTART true
+#ifndef ENERGYLEAF_SENSOR_START
+#define ENERGYLEAF_SENSOR_START false
 #endif
 
-#ifndef ENERGYLEAF_MANUALCOUNTER
-#define ENERGYLEAF_MANUALCOUNTER 5
+#ifndef ENERGYLEAF_DRIVER_START
+#define ENERGYLEAF_DRIVER_START true
+#endif
+
+#ifndef ENERGYLEAF_DRIVER_COUNTER
+#define ENERGYLEAF_DRIVER_COUNTER 5
 #endif
 
 #include <include/tasmota.h>
@@ -100,7 +104,7 @@ const uint8_t TA_SIZE PROGMEM = 1;
 
 
 struct ENERGYLEAF_STATE {
-    bool run = ENERGYLEAF_AUTOSTART;
+    bool run = ENERGYLEAF_SENSOR_START;
     //Initial start of the sensor
     bool initial = false;
     //Current token of the sensor
@@ -124,9 +128,9 @@ struct ENERGYLEAF_STATE {
     //Retry counter
     uint8_t retryCounter = 0;
     //Manual counter (seconds)
-    uint8_t manualMaxCounter = ENERGYLEAF_MANUALCOUNTER;
-    uint8_t manualCurrentCounter = ENERGYLEAF_MANUALCOUNTER;
-    bool manual = false;
+    uint8_t manualMaxCounter = ENERGYLEAF_DRIVER_COUNTER;
+    uint8_t manualCurrentCounter = ENERGYLEAF_DRIVER_COUNTER;
+    bool manual = ENERGYLEAF_DRIVER_START;
     bool debug = false;
 } energyleaf;
 
@@ -166,7 +170,7 @@ void energyleafInit(void) {
     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER: INIT 2/2"));
     //Try to get the token here already. The script is only sent if it has to be (the endpoint normally knows this). If no network connection is available at this time, a new attempt is made in the next second.
     
-    if(energyleaf.run == true) {
+    if(energyleaf.run == true || energyleaf.manual == true) {
         energyleaf.active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
     } else {
         energyleaf.active = false;
