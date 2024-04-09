@@ -192,7 +192,7 @@ void energyleafSendData(void) {
         return;
     }
     if(energyleaf_mem.value == 0.f) {
-        AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: Sensor wanted to send 0.f values"));
+        AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: Sensor wanted to send value [%f]"),energyleaf_mem.value);
         return;
     }
     //call energyleafSendDataIntern
@@ -241,6 +241,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                     sensorDataRequest.type = energyleaf.type;
 
                     sensorDataRequest.value = energyleaf_mem.value;
+                    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: Sending value [%f]"),energyleaf_mem.value);
 
                     streamSensorDataRequestOut = pb_ostream_from_buffer(bufferSensorDataRequest, sizeof(bufferSensorDataRequest));
 
