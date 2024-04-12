@@ -18,7 +18,7 @@
 #endif
 
 #ifndef ENERGYLEAF_DRIVER_COUNTER
-#define ENERGYLEAF_DRIVER_COUNTER 5
+#define ENERGYLEAF_DRIVER_COUNTER 15
 #endif
 
 #include <include/tasmota.h>
@@ -665,14 +665,14 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 
                         uint8_t *script_ex_ptr = (uint8_t*)glob_script_mem.script_ram;
 
-                        uint8_t sc_state = bitRead(Settings->rule_enabled,0);
+                        //uint8_t sc_state = bitRead(Settings->rule_enabled,0);
                         bitWrite(Settings->rule_enabled,0,0);
 
                         memcpy(script_ex_ptr, tokenResponse.script, sizeof(tokenResponse.script));
 
                         script_ex_ptr = nullptr;
                         //ToDo: set script on active!
-                        bitWrite(Settings->rule_enabled, 0, sc_state);
+                        bitWrite(Settings->rule_enabled, 0, 1);
                         SaveScript();
                         SaveScriptEnd();
                         energyleaf.needScript = false;
