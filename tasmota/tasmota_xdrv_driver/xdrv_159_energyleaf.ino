@@ -827,7 +827,7 @@ bool XDRV_159_cmd(void) {
             } else if(*cp == 'd') {
                 //DRIVER
                 char output[20];
-                dtostrf(energyleaf_mem.value,1,8,output);
+                dtostrf(energyleaf_mem.value,sizeof(output) - 1,8,output);
                 AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_DRIVER: [VALUE:%s]"),output);
                 ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"PRINT - DRIVER\"}}"));
             } 

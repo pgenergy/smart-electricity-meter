@@ -2490,7 +2490,7 @@ void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
           if(strcmp(jname,energyleaf.identifier) == 0 && !energyleaf.manual) {
             energyleaf_mem.value = doubleToFloat(sml_globs.meter_vars[index]);
             char output[20];
-            dtostrf(energyleaf_mem.value,1,dp,output);
+            dtostrf(energyleaf_mem.value,sizeof(output) - 1,dp,output);
             AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
             energyleafSendData();
           }
@@ -4623,7 +4623,7 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
         if(strcmp(jname,energyleaf.identifier) == 0) {
           uint8_t dp = atoi(cp);
           char output[20];
-          dtostrf(sml_globs.meter_vars[index],1,dp,output);
+          dtostrf(sml_globs.meter_vars[index],sizeof(output) - 1,dp,output);
           if(print) {
             AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE [%s]"),output);
           } else {
