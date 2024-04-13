@@ -841,6 +841,8 @@ bool XDRV_159_cmd(void) {
              }
         } else if(*cp == 'f') {
             energyleaf.needScript = true;
+            energyleaf.active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
+            ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"FORCE SCRIPT\"}}"));
         } else if(*cp == 'c') {
             //CONFIG
             if(energyleaf.run == true || energyleaf.manual == true || energyleaf.debug == true) {
