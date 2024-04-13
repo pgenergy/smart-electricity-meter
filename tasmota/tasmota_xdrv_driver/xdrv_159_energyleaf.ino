@@ -21,6 +21,10 @@
 #define ENERGYLEAF_DRIVER_COUNTER 15
 #endif
 
+#ifndef ENERGYLEAF_TEST_INSTANCE
+#define ENERGYLEAF_TEST_INSTANCE
+#endif
+
 #include <include/tasmota.h>
 #include <cstdint>
 #include <WiFiClientSecureLightBearSSL.h>
@@ -191,8 +195,13 @@ void energyleafSendData(void) {
         AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: RETRY COUNTER LIMIT REACHED, CHECK FOR PROBLEMS AND RESTART SENSOR IF FIXED [COUNTER:%d]"),energyleaf.retryCounter);
         return;
     }
+    #ifdef ENERGYLEAF_TEST_INSTANCE
+        energyleaf_mem.value = energyleaf_mem.value + 2.5f;
+    #endif
     if(energyleaf_mem.value == 0.f) {
-        AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: Sensor wanted to send value [%f]"),energyleaf_mem.value);
+        char output[20];
+        dtostrf(energyleaf_mem.value,sizeof(output) - 1,4,output);
+        AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: Sensor wanted to send value [%s]"),output);
         return;
     }
     //call energyleafSendDataIntern
@@ -241,7 +250,9 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                     sensorDataRequest.type = energyleaf.type;
 
                     sensorDataRequest.value = energyleaf_mem.value;
-                    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: Sending value [%f]"),energyleaf_mem.value);
+                    char output[20];
+                    dtostrf(energyleaf_mem.value,sizeof(output) - 1,4,output);
+                    AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_DRIVER: Sending value [%s]"),output);
 
                     streamSensorDataRequestOut = pb_ostream_from_buffer(bufferSensorDataRequest, sizeof(bufferSensorDataRequest));
 
@@ -884,6 +895,16 @@ bool XDRV_159_cmd(void) {
             //ADJUST / RESET
             energyleaf.retryCounter = 0;
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"RESET RETRYCOUNTER\"}}"));
+        } else if(*cp == 'i') {
+            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: run [%s]"),energyleaf.run ? "true" : "false");
+            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: initial [%s]"),energyleaf.initial ? "true" : "false");
+            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: token [%s]"),energyleaf.accessToken);
+            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: expires in [%d] seconds"),energyleaf.expiresIn);
+            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: active [%s]"),energyleaf.active ? "true" : "false");
+            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: identifier [%s]"),energyleaf.identifier);
+            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: manual  [%s]"),energyleaf.manual   ? "true" : "false");
+            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: debug [%s]"),energyleaf.debug   ? "true" : "false");
+            ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"PRINTING INFORMATION OF DRIVER\"}}"));
         }
     } else {
         ret = false;

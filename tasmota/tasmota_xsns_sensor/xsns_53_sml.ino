@@ -4627,8 +4627,10 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
           if(print) {
             AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE [%s]"),output);
           } else {
+            #ifndef ENERGYLEAF_TEST_INSTANCE
             energyleaf_mem.value = doubleToFloat(sml_globs.meter_vars[index]);
             AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
+            #endif
             energyleafSendData();
           }
         }
