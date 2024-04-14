@@ -25,6 +25,10 @@
 #define ENERGYLEAF_TEST_INSTANCE
 #endif
 
+#ifndef ENERGYLEAF_RETRY_AUTO_RESET
+#define ENERGYLEAF_RETRY_AUTO_RESET 30
+#endif
+
 #include <include/tasmota.h>
 #include <cstdint>
 #include <WiFiClientSecureLightBearSSL.h>
@@ -136,6 +140,7 @@ struct ENERGYLEAF_STATE {
     uint8_t manualCurrentCounter = ENERGYLEAF_DRIVER_COUNTER;
     bool manual = ENERGYLEAF_DRIVER_START;
     bool debug = false;
+    uint8_t counterAutoResetRetry = ENERGYLEAF_RETRY_AUTO_RESET;
 } energyleaf;
 
 struct ENERGYLEAF_MEM {
@@ -760,16 +765,27 @@ void energyleafEverySecond(void) {
     if(energyleaf.run == false && energyleaf.manual == false && energyleaf.debug == false) return;
     if(!energyleaf.active || (energyleaf.active &&  energyleaf.expiresIn <= 0)) {
         //Check whether the sensor is in the initial state (!active) or is active and its counter has expired (expiresIn == 0)
+        if(!energyleaf.active) {
+            if(energyleaf.counterAutoResetRetry > 0) {
+                --energyleaf.counterAutoResetRetry;
+            } else {
+                energyleaf.counterAutoResetRetry = ENERGYLEAF_RETRY_AUTO_RESET;
+                energyleaf.retryCounter = 0;
+            }
+        }
+
         if(!energyleaf.active && energyleaf.retryCounter == 5){
             AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: RETRY COUNTER LIMIT REACHED, CHECK FOR PROBLEMS AND RESTART SENSOR IF FIXED [COUNTER:%d]"),energyleaf.retryCounter);
             return;
         }
+
         AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: NOT ACTIVE OR COUNTER EXPIRED [ACTIVE:%s;COUNTER:%d]"),energyleaf.active ? "true":"false",energyleaf.expiresIn);
         energyleaf.active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
         if(!energyleaf.active) {
             ++energyleaf.retryCounter;
         }
         if(energyleaf.active) {
+            energyleaf.counterAutoResetRetry = ENERGYLEAF_RETRY_AUTO_RESET;
             energyleaf.retryCounter = 0;
         }
     } else {
