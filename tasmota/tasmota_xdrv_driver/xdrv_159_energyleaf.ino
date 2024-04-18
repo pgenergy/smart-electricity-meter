@@ -22,9 +22,9 @@
 #define ENERGYLEAF_DRIVER_COUNTER 15
 #endif
 
-/*#ifndef ENERGYLEAF_TEST_INSTANCE
+#ifndef ENERGYLEAF_TEST_INSTANCE
 #define ENERGYLEAF_TEST_INSTANCE
-#endif*/
+#endif
 
 #ifndef ENERGYLEAF_RETRY_AUTO_RESET
 #define ENERGYLEAF_RETRY_AUTO_RESET 30
@@ -184,6 +184,7 @@ void energyleafInit(void) {
             AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER: DEFAULT SCRIPT IS LOADED - NEED TO LOAD SCRIPT FOR THIS SENSOR"));
             //Currently not directly used. Maybe used in the future
             energyleaf.active = false;
+            energyleaf.needScript = true;
         }
     }
     
@@ -212,7 +213,10 @@ ENERGYLEAF_ERROR energyleafSendData(void) {
         return ENERGYLEAF_ERROR::ERROR;
     }
     #ifdef ENERGYLEAF_TEST_INSTANCE
-        energyleaf_mem.value = energyleaf_mem.last_value + 2.5f;
+        /*if(energyleaf_mem.value == 0.f) {
+            energyleaf_mem.value = energyleaf_mem.last_value;
+        }*/
+        energyleaf_mem.value = energyleaf_mem.value + 2.5f;
     #endif
     if(energyleaf_mem.value == 0.f) {
         char output[20];
@@ -686,9 +690,9 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     strcpy(energyleaf.accessToken, tokenResponse.access_token);
                     energyleaf.expiresIn = tokenResponse.expires_in;
 
-                    if(tokenResponse.has_current_value) {
-                        energyleaf_mem.last_value = tokenResponse.current_value;
-                    }
+                    //if(tokenResponse.has_current_value) {
+                        //energyleaf_mem.last_value = tokenResponse.current_value;
+                    //}
 
                     if(tokenResponse.has_script) {
                         state = sizeof(tokenResponse.script) < glob_script_mem.script_size;
@@ -708,8 +712,8 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         script_ex_ptr = nullptr;
                         //ToDo: set script on active!
                         bitWrite(Settings->rule_enabled, 0, 1);
-                        SaveScript();
-                        SaveScriptEnd();
+                        //SaveScript();
+                        //SaveScriptEnd();
                         energyleaf.needScript = false;
                     } else {
                         if(energyleaf.needScript) {
@@ -810,14 +814,14 @@ void energyleafEverySecond(void) {
     } else {
         --energyleaf.expiresIn;
     }
-    if(energyleaf.manual) {
-        //if(energyleaf.manualCurrentCounter <= 0) {
-        XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
-        /*    energyleaf.manualCurrentCounter = energyleaf.manualMaxCounter;
+    /*if(energyleaf.manual) {
+        if(energyleaf.manualCurrentCounter <= 0) {
+        //XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
+            energyleaf.manualCurrentCounter = energyleaf.manualMaxCounter;
         } else {
             --energyleaf.manualCurrentCounter;
-        }*/
-    }
+        }
+    }*/
 }
 
 void energyleafDevicePower(void) {

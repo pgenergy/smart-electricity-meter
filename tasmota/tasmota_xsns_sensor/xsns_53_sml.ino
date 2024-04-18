@@ -4624,22 +4624,22 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
             energyleaf_mem.value = doubleToFloat(sml_globs.meter_vars[index]);
             AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
             #endif
-            if(energyleafSendData() == ENERGYLEAF_ERROR::RET) {
-              ++energyleaf.retCnt;
+            //if(energyleafSendData() == ENERGYLEAF_ERROR::RET) {
+              /*++energyleaf.retCnt;
               if(energyleaf.retCnt >= ENERGYLEAF_CNT_MAX){
                 energyleaf.retCnt = 0;
               } else { 
                 SML_Energyleaf(false);
-              }
-            }
+              }*/
+            //}
 
-            delay(500);
+            //delay(500);
 
-            wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);
+            /*wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);
             wifi_fpm_open();
-            wifi_fpm_do_sleep(15000000);
+            wifi_fpm_do_sleep(15000000);*/
 
-            delay(500);
+            //delay(500);
 
           }
         }
