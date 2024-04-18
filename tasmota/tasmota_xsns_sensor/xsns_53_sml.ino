@@ -2487,13 +2487,6 @@ void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
         if (dp & 0x10) {
           // immediate mqtt
           DOUBLE2CHAR(sml_globs.meter_vars[index], dp & 0xf, tpowstr);
-          if(strcmp(jname,energyleaf.identifier) == 0 && !energyleaf.manual) {
-            energyleaf_mem.value = doubleToFloat(sml_globs.meter_vars[index]);
-            char output[20];
-            dtostrf(energyleaf_mem.value,sizeof(output) - 1,dp,output);
-            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
-            energyleafSendData();
-          }
           ResponseTime_P(PSTR(",\"%s\":{\"%s\":%s}}"), sml_globs.mp[mindex].prefix, jname, tpowstr);
           MqttPublishTeleSensor();
         }
@@ -4631,7 +4624,23 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
             energyleaf_mem.value = doubleToFloat(sml_globs.meter_vars[index]);
             AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
             #endif
-            energyleafSendData();
+            if(energyleafSendData() == ENERGYLEAF_ERROR::RET) {
+              ++energyleaf.retCnt;
+              if(energyleaf.retCnt >= ENERGYLEAF_CNT_MAX){
+                energyleaf.retCnt = 0;
+              } else { 
+                SML_Energyleaf(false);
+              }
+            }
+
+            delay(500);
+
+            wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);
+            wifi_fpm_open();
+            wifi_fpm_do_sleep(15000000);
+
+            delay(500);
+
           }
         }
       }

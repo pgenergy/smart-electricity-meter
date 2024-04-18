@@ -1,3 +1,4 @@
+
 #ifdef USE_ENERGYLEAF
 #define XDRV_159 159
 
@@ -21,12 +22,20 @@
 #define ENERGYLEAF_DRIVER_COUNTER 15
 #endif
 
-#ifndef ENERGYLEAF_TEST_INSTANCE
+/*#ifndef ENERGYLEAF_TEST_INSTANCE
 #define ENERGYLEAF_TEST_INSTANCE
-#endif
+#endif*/
 
 #ifndef ENERGYLEAF_RETRY_AUTO_RESET
 #define ENERGYLEAF_RETRY_AUTO_RESET 30
+#endif
+
+#ifndef ENERGYLEAF_THRESHOLD_CURVAL
+#define ENERGYLEAF_THRESHOLD_CURVAL 50
+#endif
+
+#ifndef ENERGYLEAF_CNT_MAX
+#define ENERGYLEAF_CNT_MAX 5
 #endif
 
 #include <include/tasmota.h>
@@ -141,16 +150,18 @@ struct ENERGYLEAF_STATE {
     bool manual = ENERGYLEAF_DRIVER_START;
     bool debug = false;
     uint8_t counterAutoResetRetry = ENERGYLEAF_RETRY_AUTO_RESET;
+    uint8_t retCnt = 0;
 } energyleaf;
 
 struct ENERGYLEAF_MEM {
     float value = 0.f;
+    float last_value = 0.f;
 } energyleaf_mem;
 
 BearSSL::WiFiClientSecure_light *energyleafClient = nullptr;
 
 void energyleafInit(void);
-void energyleafSendData(void);
+ENERGYLEAF_ERROR energyleafSendData(void);
 ENERGYLEAF_ERROR energyleafSendDataIntern(void);
 ENERGYLEAF_ERROR energyleafRequestTokenIntern(void);
 bool XDRV_159_cmd(void);
@@ -192,22 +203,26 @@ void energyleafInit(void) {
     }
 }
 
-void energyleafSendData(void) {
+ENERGYLEAF_ERROR energyleafSendData(void) {
     if(!energyleaf.run && !energyleaf.manual && !energyleaf.debug) {
-        return;
+        return ENERGYLEAF_ERROR::ERROR;
     }
     if((!energyleaf.active && energyleaf.retryCounter == 5 && (energyleaf.run || energyleaf.manual || energyleaf.debug)) || (!energyleaf.active && (energyleaf.run || energyleaf.manual || energyleaf.debug))){
         AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: RETRY COUNTER LIMIT REACHED, CHECK FOR PROBLEMS AND RESTART SENSOR IF FIXED [COUNTER:%d]"),energyleaf.retryCounter);
-        return;
+        return ENERGYLEAF_ERROR::ERROR;
     }
     #ifdef ENERGYLEAF_TEST_INSTANCE
-        energyleaf_mem.value = energyleaf_mem.value + 2.5f;
+        energyleaf_mem.value = energyleaf_mem.last_value + 2.5f;
     #endif
     if(energyleaf_mem.value == 0.f) {
         char output[20];
         dtostrf(energyleaf_mem.value,sizeof(output) - 1,4,output);
         AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: Sensor wanted to send value [%s]"),output);
-        return;
+        return ENERGYLEAF_ERROR::RET;
+    }
+    if(energyleaf_mem.value > energyleaf_mem.last_value + ENERGYLEAF_THRESHOLD_CURVAL ) {
+        AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: Sensor value exceeded threshold"));
+        return ENERGYLEAF_ERROR::RET;
     }
     //call energyleafSendDataIntern
     ENERGYLEAF_ERROR state = energyleafSendDataIntern();
@@ -219,18 +234,18 @@ void energyleafSendData(void) {
             if(energyleaf.active && energyleaf.expiresIn > 0) {
                 //We ignore the status because if it is wrong again (the transfer has failed), we cannot fix it by automatically retrying and possibly spamming the endpoint host.
                 state = energyleafSendDataIntern();
-                return;
+                return ENERGYLEAF_ERROR::IGNORE;
             } else {    
                 AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: COULD NOT GET A NEW TOKEN - NO RETRY"));
-                return;
+                return ENERGYLEAF_ERROR::IGNORE;
             }
         } else {
             AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: ERROR IN THE TRANSMISSION OF DATA - NO RETRY"));
-            return;
+            return ENERGYLEAF_ERROR::IGNORE;
         }
     } else {
         AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: SUCCESSFULLY TRANSMITTED DATA"));
-        return;
+        return ENERGYLEAF_ERROR::NO_ERROR;
     }
 }
 
@@ -671,6 +686,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     strcpy(energyleaf.accessToken, tokenResponse.access_token);
                     energyleaf.expiresIn = tokenResponse.expires_in;
 
+                    if(tokenResponse.has_current_value) {
+                        energyleaf_mem.last_value = tokenResponse.current_value;
+                    }
+
                     if(tokenResponse.has_script) {
                         state = sizeof(tokenResponse.script) < glob_script_mem.script_size;
                         if(!state) {
@@ -792,12 +811,12 @@ void energyleafEverySecond(void) {
         --energyleaf.expiresIn;
     }
     if(energyleaf.manual) {
-        if(energyleaf.manualCurrentCounter <= 0) {
-            XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
-            energyleaf.manualCurrentCounter = energyleaf.manualMaxCounter;
+        //if(energyleaf.manualCurrentCounter <= 0) {
+        XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
+        /*    energyleaf.manualCurrentCounter = energyleaf.manualMaxCounter;
         } else {
             --energyleaf.manualCurrentCounter;
-        }
+        }*/
     }
 }
 
