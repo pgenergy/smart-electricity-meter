@@ -35,7 +35,7 @@
 #endif
 
 #ifndef ENERGYLEAF_CNT_MAX
-#define ENERGYLEAF_CNT_MAX 5
+#define ENERGYLEAF_CNT_MAX 10
 #endif
 
 #include <include/tasmota.h>
@@ -151,6 +151,7 @@ struct ENERGYLEAF_STATE {
     bool debug = false;
     uint8_t counterAutoResetRetry = ENERGYLEAF_RETRY_AUTO_RESET;
     uint8_t retCnt = 0;
+    bool cal = false;
 } energyleaf;
 
 struct ENERGYLEAF_MEM {
@@ -213,10 +214,10 @@ ENERGYLEAF_ERROR energyleafSendData(void) {
         return ENERGYLEAF_ERROR::ERROR;
     }
     #ifdef ENERGYLEAF_TEST_INSTANCE
-        /*if(energyleaf_mem.value == 0.f) {
+        if(energyleaf_mem.value == 0.f) {
             energyleaf_mem.value = energyleaf_mem.last_value;
-        }*/
-        energyleaf_mem.value = energyleaf_mem.value + 2.5f;
+        }
+        energyleaf_mem.value = energyleaf_mem.value + 0.1f;
     #endif
     if(energyleaf_mem.value == 0.f) {
         char output[20];
@@ -494,7 +495,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     tokenRequest.type = energyleaf.type;
                     //if true it forces the server to (re-)send the script in the response
                     tokenRequest.need_script = energyleaf.needScript;
-
+                    tokenRequest.has_need_script = energyleaf.needScript;
                     streamTokenRequestOut = pb_ostream_from_buffer(bufferTokenRequest, sizeof(bufferTokenRequest));
 
                     AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: NEED SCRIPT [%s]"),tokenRequest.need_script ? "true" : "false");
@@ -690,9 +691,9 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     strcpy(energyleaf.accessToken, tokenResponse.access_token);
                     energyleaf.expiresIn = tokenResponse.expires_in;
 
-                    //if(tokenResponse.has_current_value) {
-                        //energyleaf_mem.last_value = tokenResponse.current_value;
-                    //}
+                    if(tokenResponse.has_current_value) {
+                        energyleaf_mem.last_value = tokenResponse.current_value;
+                    }
 
                     if(tokenResponse.has_script) {
                         state = sizeof(tokenResponse.script) < glob_script_mem.script_size;
@@ -710,10 +711,11 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         memcpy(script_ex_ptr, tokenResponse.script, sizeof(tokenResponse.script));
 
                         script_ex_ptr = nullptr;
-                        //ToDo: set script on active!
-                        bitWrite(Settings->rule_enabled, 0, 1);
-                        //SaveScript();
-                        //SaveScriptEnd();
+
+                        //bitWrite(Settings->rule_enabled, 0, 1);
+
+                        SaveScript();
+                        SaveScriptEnd();
                         energyleaf.needScript = false;
                     } else {
                         if(energyleaf.needScript) {
@@ -785,6 +787,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 }
 
 void energyleafEverySecond(void) {
+    yield();
     if(energyleaf.run == false && energyleaf.manual == false && energyleaf.debug == false) return;
     if(!energyleaf.active || (energyleaf.active &&  energyleaf.expiresIn <= 0)) {
         //Check whether the sensor is in the initial state (!active) or is active and its counter has expired (expiresIn == 0)
@@ -814,14 +817,16 @@ void energyleafEverySecond(void) {
     } else {
         --energyleaf.expiresIn;
     }
-    /*if(energyleaf.manual) {
-        if(energyleaf.manualCurrentCounter <= 0) {
-        //XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
-            energyleaf.manualCurrentCounter = energyleaf.manualMaxCounter;
-        } else {
+    //AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: NOT ACTIVE OR COUNTER EXPIRED [cal:%s]"),energyleaf.cal ? "true":"false");
+    if(energyleaf.manual && bitRead(Settings->rule_enabled, 0) && energyleaf.cal == false && WiFi.isConnected()) {
+        //if(energyleaf.manualCurrentCounter <= 0) {
+        energyleaf.cal = true;
+        XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
+            //energyleaf.manualCurrentCounter = energyleaf.manualMaxCounter;
+        /*} else {
             --energyleaf.manualCurrentCounter;
-        }
-    }*/
+        }*/
+    }
 }
 
 void energyleafDevicePower(void) {
