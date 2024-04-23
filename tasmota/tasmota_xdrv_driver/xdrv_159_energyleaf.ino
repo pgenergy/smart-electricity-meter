@@ -22,9 +22,10 @@
 #define ENERGYLEAF_DRIVER_COUNTER 15
 #endif
 
-#ifndef ENERGYLEAF_TEST_INSTANCE
+//Enable following if the sensor should send each time to test, 0.1 kWh.
+/*#ifndef ENERGYLEAF_TEST_INSTANCE
 #define ENERGYLEAF_TEST_INSTANCE
-#endif
+#endif*/
 
 #ifndef ENERGYLEAF_RETRY_AUTO_RESET
 #define ENERGYLEAF_RETRY_AUTO_RESET 30
