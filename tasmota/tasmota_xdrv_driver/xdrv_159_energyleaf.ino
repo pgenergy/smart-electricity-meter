@@ -186,7 +186,11 @@ void energyleafInit(void) {
             //Currently not directly used. Maybe used in the future
             energyleaf.active = false;
             energyleaf.needScript = true;
+        } else if (bitRead(Settings->rule_enabled,0)) { //if script not enable, get update and activate
+            energyleaf.active = false;
+            energyleaf.needScript = true;
         }
+
     }
     
     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER: INIT 2/2"));
@@ -712,7 +716,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 
                         script_ex_ptr = nullptr;
 
-                        //bitWrite(Settings->rule_enabled, 0, 1);
+                        bitWrite(Settings->rule_enabled, 0, 1);
 
                         SaveScript();
                         SaveScriptEnd();
