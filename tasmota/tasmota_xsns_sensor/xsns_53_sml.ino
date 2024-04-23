@@ -4588,7 +4588,7 @@ void SML_Energyleaf(bool print) {
   }  
 }
 
-#define sleepTimeSeconds 7
+#define sleepTimeSeconds 10
 
 //based on SML_Immediate_MQTT
 //example: 1,77070100010800ff@1000,Consumption (Total),kWh,ENERGYLEAF_KWH,4
@@ -4651,6 +4651,8 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
             wifi_fpm_open(); 
             wifi_fpm_do_sleep(sleepTimeSeconds * 1000 * 1000);
             delay((sleepTimeSeconds * 1000) + 1);
+            wifi_fpm_do_sleep(5 * 1000 * 1000);
+            delay((5 * 1000) + 1);
             ESP.wdtFeed();
             yield();
             wifi_fpm_close();
