@@ -2487,13 +2487,6 @@ void SML_Immediate_MQTT(const char *mp,uint8_t index,uint8_t mindex) {
         if (dp & 0x10) {
           // immediate mqtt
           DOUBLE2CHAR(sml_globs.meter_vars[index], dp & 0xf, tpowstr);
-          if(strcmp(jname,energyleaf.identifier) == 0 && !energyleaf.manual) {
-            energyleaf_mem.value = doubleToFloat(sml_globs.meter_vars[index]);
-            char output[20];
-            dtostrf(energyleaf_mem.value,sizeof(output) - 1,dp,output);
-            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
-            energyleafSendData();
-          }
           ResponseTime_P(PSTR(",\"%s\":{\"%s\":%s}}"), sml_globs.mp[mindex].prefix, jname, tpowstr);
           MqttPublishTeleSensor();
         }
@@ -4595,6 +4588,7 @@ void SML_Energyleaf(bool print) {
   }  
 }
 
+#define sleepTimeSeconds 10
 
 //based on SML_Immediate_MQTT
 //example: 1,77070100010800ff@1000,Consumption (Total),kWh,ENERGYLEAF_KWH,4
@@ -4631,12 +4625,67 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
             energyleaf_mem.value = doubleToFloat(sml_globs.meter_vars[index]);
             AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
             #endif
-            energyleafSendData();
+            ESP.wdtFeed();
+            yield();
+            if(energyleafSendData() == ENERGYLEAF_ERROR::RET) {
+              if(energyleaf.retCnt >= ENERGYLEAF_CNT_MAX){
+                energyleaf.retCnt = 0;
+              } else { 
+                ++energyleaf.retCnt;
+                energyleaf.cal = false;
+                return;
+              }
+            }
+
+            delay(500);
+
+            Serial.flush();
+            //WiFi.mode(WIFI_OFF);
+            WifiDisable();
+            wifi_station_disconnect();
+            wifi_set_opmode(NULL_MODE);
+            extern os_timer_t *timer_list; 
+            timer_list = nullptr;
+            wifi_fpm_set_sleep_type(LIGHT_SLEEP_T); 
+            wifi_fpm_set_wakeup_cb(wakeupCallback); 
+            wifi_fpm_open(); 
+            wifi_fpm_do_sleep(sleepTimeSeconds * 1000 * 1000);
+            delay((sleepTimeSeconds * 1000) + 1);
+            wifi_fpm_do_sleep(5 * 1000 * 1000);
+            delay((5 * 1000) + 1);
+            ESP.wdtFeed();
+            yield();
+            wifi_fpm_close();
+            wifi_set_opmode(STATION_MODE);
+            wifi_station_connect();
+            WifiEnable();
+            WifiConnect();
+
+            if(energyleaf.cal) {
+              energyleaf.cal = false;
+            }
+
+            //WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
+            //WiFi.forceSleepBegin();
+            //delay(1000);
+            //WiFi.forceSleepWake();
+
+            /*wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);
+            wifi_fpm_open();
+            wifi_fpm_do_sleep(15000000);*/
+
+            //delay(500);
+
           }
         }
       }
     }
   }
+}
+
+void wakeupCallback() { 
+    Serial.println("ENERGYLEAF_SENSOR: Wakeup"); 
+    Serial.flush();
 }
 
 /*********************************************************************************************\
@@ -4707,7 +4756,7 @@ bool Xsns53(uint32_t function) {
         }
         break;
       case FUNC_ENERGYLEAF_SEND:
-        AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: GOT COMMAND TO SEND DATA!"));
+        AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: GOT COMMAND TO SEND DATA! %s"), sml_globs.ready ? "true" : "false");
         if (sml_globs.ready && (energyleaf.manual || energyleaf.debug)) {
           SML_Energyleaf(false);
         }

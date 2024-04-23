@@ -6,7 +6,8 @@ enum ENERGYLEAF_ERROR {
     ERROR,
     NO_ERROR,
     TOKEN_EXPIRED,
-    RET
+    RET,
+    IGNORE
 };
 
 #endif
