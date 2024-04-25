@@ -1850,6 +1850,7 @@ void SML_Decode(uint8_t index) {
         double fac = CharToDouble((char*)mp);
         sml_globs.meter_vars[vindex] /= fac;
         SML_Immediate_MQTT((const char*)mp, vindex, mindex);
+        energyleaf.smlUpdate = true;
         sml_globs.dvalid[vindex] = 1;
         // get sfac
       } else if (*mp == 'd') {
@@ -1891,6 +1892,7 @@ void SML_Decode(uint8_t index) {
               double fac = CharToDouble((char*)mp);
               sml_globs.meter_vars[vindex] /= fac;
               SML_Immediate_MQTT((const char*)mp, vindex, mindex);
+              energyleaf.smlUpdate = true;
             }
           }
           //sml_globs.dvalid[vindex] = 1;
@@ -2443,6 +2445,7 @@ void SML_Decode(uint8_t index) {
           }
           sml_globs.meter_vars[vindex] /= fac;
           SML_Immediate_MQTT((const char*)mp, vindex, mindex);
+          energyleaf.smlUpdate = true;
         }
       }
       //AddLog(LOG_LEVEL_INFO, PSTR("set valid in line %d"), vindex);
@@ -4627,7 +4630,7 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
             #endif
             ESP.wdtFeed();
             yield();
-            if(energyleafSendData() == ENERGYLEAF_ERROR::RET) {
+            if(energyleaf.smlUpdate && energyleafSendData() == ENERGYLEAF_ERROR::RET) {
               if(energyleaf.retCnt >= ENERGYLEAF_CNT_MAX){
                 energyleaf.retCnt = 0;
               } else { 
@@ -4635,11 +4638,19 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
                 energyleaf.cal = false;
                 return;
               }
+            } else {
+              if(!energyleaf.smlUpdate) {
+                energyleaf.cal = false;
+                return;
+              } else {
+                energyleaf.retCnt = 0;
+              }
             }
 
             delay(500);
 
             Serial.flush();
+            energyleaf.smlUpdate = false;
             //WiFi.mode(WIFI_OFF);
             WifiDisable();
             wifi_station_disconnect();

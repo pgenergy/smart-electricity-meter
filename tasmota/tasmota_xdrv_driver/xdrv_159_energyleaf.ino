@@ -31,12 +31,6 @@
 #define ENERGYLEAF_RETRY_AUTO_RESET 30
 #endif
 
-//Value to add to the last correct meter reading that got transfered back from the endpoint.
-//Its current reading < last correct reading + value
-#ifndef ENERGYLEAF_THRESHOLD_CURVAL
-#define ENERGYLEAF_THRESHOLD_CURVAL 25
-#endif
-
 //Value that identifies the # times the sensor trys to get a correct (approvable) sensor reading.
 #ifndef ENERGYLEAF_CNT_MAX
 #define ENERGYLEAF_CNT_MAX 5
@@ -156,6 +150,7 @@ struct ENERGYLEAF_STATE {
     uint8_t counterAutoResetRetry = ENERGYLEAF_RETRY_AUTO_RESET;
     uint8_t retCnt = 0;
     bool cal = false;
+    bool smlUpdate = false;
 } energyleaf;
 
 struct ENERGYLEAF_MEM {
@@ -230,10 +225,6 @@ ENERGYLEAF_ERROR energyleafSendData(void) {
         char output[20];
         dtostrf(energyleaf_mem.value,sizeof(output) - 1,4,output);
         AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: Sensor wanted to send value [%s]"),output);
-        return ENERGYLEAF_ERROR::RET;
-    }
-    if(energyleaf_mem.value > energyleaf_mem.last_value + ENERGYLEAF_THRESHOLD_CURVAL ) {
-        AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: Sensor value exceeded threshold"));
         return ENERGYLEAF_ERROR::RET;
     }
     //call energyleafSendDataIntern
@@ -345,6 +336,11 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                             } else {
                                 AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - GOT A %d STATUS"),headerStatusCode);
                                 //return ENERGYLEAF_ERROR::ERROR; //If a special status is known that results in no body here we can return direct
+                                if(headerStatusCode == ENERGYLEAF_TOKEN_EXPIRED_CODE) {
+                                    return ENERGYLEAF_ERROR::TOKEN_EXPIRED;
+                                } else {
+                                    return ENERGYLEAF_ERROR::ERROR;
+                                }
                             }
                             continue;
                         }
@@ -565,6 +561,11 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                             } else {
                                 AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - GOT A %d STATUS"),headerStatusCode);
                                 //return ENERGYLEAF_ERROR::ERROR; //If a special status is known that results in no body here we can return direct
+                                if(headerStatusCode == ENERGYLEAF_TOKEN_EXPIRED_CODE) {
+                                    return ENERGYLEAF_ERROR::TOKEN_EXPIRED;
+                                } else {
+                                    return ENERGYLEAF_ERROR::ERROR;
+                                }
                             }
                             continue;
                         }
