@@ -23,20 +23,23 @@
 #endif
 
 //Enable following if the sensor should send each time to test, 0.1 kWh.
-/*#ifndef ENERGYLEAF_TEST_INSTANCE
+#ifndef ENERGYLEAF_TEST_INSTANCE
 #define ENERGYLEAF_TEST_INSTANCE
-#endif*/
+#endif
 
 #ifndef ENERGYLEAF_RETRY_AUTO_RESET
 #define ENERGYLEAF_RETRY_AUTO_RESET 30
 #endif
 
+//Value to add to the last correct meter reading that got transfered back from the endpoint.
+//Its current reading < last correct reading + value
 #ifndef ENERGYLEAF_THRESHOLD_CURVAL
-#define ENERGYLEAF_THRESHOLD_CURVAL 50
+#define ENERGYLEAF_THRESHOLD_CURVAL 25
 #endif
 
+//Value that identifies the # times the sensor trys to get a correct (approvable) sensor reading.
 #ifndef ENERGYLEAF_CNT_MAX
-#define ENERGYLEAF_CNT_MAX 10
+#define ENERGYLEAF_CNT_MAX 5
 #endif
 
 #include <include/tasmota.h>
@@ -187,11 +190,10 @@ void energyleafInit(void) {
             //Currently not directly used. Maybe used in the future
             energyleaf.active = false;
             energyleaf.needScript = true;
-        } else if (bitRead(Settings->rule_enabled,0)) { //if script not enable, get update and activate
+        } else if (bitRead(Settings->rule_enabled,0) == 0) { //if script not enable, get update and activate
             energyleaf.active = false;
-            energyleaf.needScript = true;
+            bitWrite(Settings->rule_enabled, 0, 1);
         }
-
     }
     
     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER: INIT 2/2"));
@@ -717,10 +719,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 
                         script_ex_ptr = nullptr;
 
-                        bitWrite(Settings->rule_enabled, 0, 1);
-
                         SaveScript();
                         SaveScriptEnd();
+
+                        bitWrite(Settings->rule_enabled, 0, 1);
                         energyleaf.needScript = false;
                     } else {
                         if(energyleaf.needScript) {
@@ -973,7 +975,10 @@ bool Xdrv159(uint32_t function) {
     } else {
         switch(function) {
             case FUNC_EVERY_SECOND:
-                energyleafEverySecond();
+                if(WiFi.isConnected()) {
+                    //Without wifi a run trough the code will waste instructions.
+                    energyleafEverySecond();
+                }
             break;
             case FUNC_SET_DEVICE_POWER: 
                 energyleafDevicePower();
