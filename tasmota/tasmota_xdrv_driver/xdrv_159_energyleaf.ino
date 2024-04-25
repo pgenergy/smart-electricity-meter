@@ -242,6 +242,8 @@ ENERGYLEAF_ERROR energyleafSendData(void) {
                 AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: COULD NOT GET A NEW TOKEN - NO RETRY"));
                 return ENERGYLEAF_ERROR::IGNORE;
             }
+        } else if(state == ENERGYLEAF_ERROR::RET) {
+            return state;
         } else {
             AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: ERROR IN THE TRANSMISSION OF DATA - NO RETRY"));
             return ENERGYLEAF_ERROR::IGNORE;
@@ -455,6 +457,9 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                     if(sensorDataResponse.status == ENERGYLEAF_TOKEN_EXPIRED_CODE) {
                         return ENERGYLEAF_ERROR::TOKEN_EXPIRED;
                     } else {
+                        if(sensorDataResponse.status == ENERGYLEAF_ENDPOINT_DATA_RETRY && sensorDataResponse.has_status_message && sensorDataResponse.status_message == ENERGYLEAF_ENDPOINT_DATA_RETRY_MSG) {
+                            return ENERGYLEAF_ERROR::RET;
+                        }
                         return ENERGYLEAF_ERROR::ERROR;
                     }
                 }        
