@@ -4635,6 +4635,7 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
                 energyleaf.retCnt = 0;
               } else { 
                 ++energyleaf.retCnt;
+                energyleaf.smlUpdate = false;
                 energyleaf.cal = false;
                 return;
               }
