@@ -161,6 +161,7 @@ bool XDRV_159_cmd(void);
 
 void energyleafInit(void) {
     AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: INIT 1/2"));
+    pinMode(2, OUTPUT);
     AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: MAC:[%s]"),WiFi.macAddress().c_str());
     if(!energyleafClient) {
         AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: INIT CLIENT"));
@@ -254,6 +255,13 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
     }
     if(energyleafClient) {
         if(WiFi.status() == WL_CONNECTED) {
+            digitalWrite(2,HIGH);
+            delay(100);
+            digitalWrite(2,LOW);
+            delay(100);
+            digitalWrite(2,HIGH);
+            delay(100);
+            digitalWrite(2,LOW);
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: WIFI IS AVAILABLE"));
             bool state = false;
             bool chunked = false;
@@ -795,10 +803,32 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
             return ENERGYLEAF_ERROR::NO_ERROR;
         } else {
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: NO WIFI TO CREATE A REQUEST - AUTO-RETRY IN SOME TIME"));
+            digitalWrite(2,HIGH);
+            delay(100);
+            digitalWrite(2,LOW);
+            delay(100);
+            digitalWrite(2,HIGH);
+            delay(100);
+            digitalWrite(2,LOW);
+            delay(100);
+            digitalWrite(2,HIGH);
+            delay(100);
+            digitalWrite(2,LOW);
             return ENERGYLEAF_ERROR::ERROR;
         }
     } else {
         AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: NO CLIENT IS AVAILABLE - RESTART SENSOR OR CONTACT SUPPORT"));
+        digitalWrite(2,HIGH);
+        delay(100);
+        digitalWrite(2,LOW);
+        delay(100);
+        digitalWrite(2,HIGH);
+        delay(100);
+        digitalWrite(2,LOW);
+        delay(100);
+        digitalWrite(2,HIGH);
+        delay(100);
+        digitalWrite(2,LOW);
         return ENERGYLEAF_ERROR::ERROR; 
     }
 }
@@ -851,8 +881,11 @@ void energyleafEverySecond(void) {
         //request sensor to send new data (driver is running, script is enable, no lock is set and wifi is connected)
         if(energyleaf.running && bitRead(Settings->rule_enabled,0) && !energyleaf.lock && WiFi.isConnected()) {
             energyleaf.lock = true;
+            digitalWrite(2,HIGH);
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: SML-Update [%s] - REQUEST SENDING"),energyleaf.smlUpdate ? "true" : "false");
             XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
+            delay(500);
+            digitalWrite(2,LOW);
             if(energyleaf.lock) energyleaf.lock = false;
         } else {
             if(energyleaf.running) {
@@ -897,11 +930,9 @@ bool XDRV_159_cmd(void) {
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"STOP\"}}"));
         } else if(*cp == 'v') {
             //VERIFY / TEST
-            if(!energyleaf.running) {
-                energyleaf_mem.value = 10;
-                energyleafSendData();
-                ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"VERIFY / TEST\"}}"));
-            }
+            energyleaf_mem.value = energyleaf_mem.last_value + 0.15;
+            energyleafSendData();
+            ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"VERIFY / TEST\"}}"));
         } else if(*cp == 'p') {
             //PRINT
             ++cp;
@@ -921,6 +952,7 @@ bool XDRV_159_cmd(void) {
             ++cp;
              if(*cp == 's') {
                 //SEND
+                energyleaf.smlUpdate = true;
                 XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
                 ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"MANUAL - SEND\"}}"));
              }
@@ -956,12 +988,12 @@ bool XDRV_159_cmd(void) {
             energyleaf.retryCounter = 0;
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"RESET RETRYCOUNTER\"}}"));
         } else if(*cp == 'i') {
-            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: run [%s]"),energyleaf.running ? "true" : "false");
-            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: token [%s]"),energyleaf.accessToken);
-            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: expires in [%d] seconds"),energyleaf.expiresIn);
-            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: active [%s]"),energyleaf.active ? "true" : "false");
-            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: identifier [%s]"),energyleaf.identifier);
-            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: debug [%s]"),energyleaf.debug   ? "true" : "false");
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: run [%s]"),energyleaf.running ? "true" : "false");
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: token [%s]"),energyleaf.accessToken);
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: expires in [%d] seconds"),energyleaf.expiresIn);
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: active [%s]"),energyleaf.active ? "true" : "false");
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: identifier [%s]"),energyleaf.identifier);
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: debug [%s]"),energyleaf.debug   ? "true" : "false");
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"PRINTING INFORMATION OF DRIVER\"}}"));
         }
     } else {
