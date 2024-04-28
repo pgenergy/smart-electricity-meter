@@ -10,12 +10,8 @@
 #define ENERGYLEAF_KEYWORD "ENERGYLEAF_KWH"
 #endif
 
-#ifndef ENERGYLEAF_SENSOR_START
-#define ENERGYLEAF_SENSOR_START false
-#endif
-
-#ifndef ENERGYLEAF_DRIVER_START
-#define ENERGYLEAF_DRIVER_START true
+#ifndef ENERGYLEAF_DRIVER_AUTO_RUN
+#define ENERGYLEAF_DRIVER_AUTO_RUN true
 #endif
 
 #ifndef ENERGYLEAF_DRIVER_COUNTER
@@ -119,9 +115,8 @@ const uint8_t TA_SIZE PROGMEM = 1;
 
 
 struct ENERGYLEAF_STATE {
-    bool run = ENERGYLEAF_SENSOR_START;
-    //Initial start of the sensor
-    bool initial = false;
+    bool running = ENERGYLEAF_DRIVER_AUTO_RUN;
+    bool debug = false;
     //Current token of the sensor
     char accessToken[45]; 
     //Lifetime counter of the token (decreases)
@@ -129,28 +124,26 @@ struct ENERGYLEAF_STATE {
     //State if the sensor got min. one token already 
     bool active = false;
     //State if certificates for secured connection are loaded
-    bool certLoaded = false;    
+    bool certLoaded = false;   
     //State if the script is needed to be loaded (forced load)
-    bool needScript = false;  
+    bool needScript = false;   
     //The type of this sensor
-    const SensorType type = SensorType_DIGITAL_ELECTRICITY;    
+    const SensorType type = SensorType_DIGITAL_ELECTRICITY;  
+    //Identifier for the sml interface
+    char identifier[20] = ENERGYLEAF_KEYWORD;
     //Base dddress of all endpoints
     const char host[sizeof(ENERGYLEAF_ENDPOINT_HOST)] = ENERGYLEAF_ENDPOINT_HOST;
     //Port of the base address (default is 443)
     const uint16_t port = 443;   
-    //Identifier for the sml interface
-    char identifier[20] = ENERGYLEAF_KEYWORD;
     //Retry counter
     uint8_t retryCounter = 0;
-    //Manual counter (seconds)
-    uint8_t manualMaxCounter = ENERGYLEAF_DRIVER_COUNTER;
-    uint8_t manualCurrentCounter = ENERGYLEAF_DRIVER_COUNTER;
-    bool manual = ENERGYLEAF_DRIVER_START;
-    bool debug = false;
+    //Identifies if there was min. one sml update
+    bool smlUpdate = false;
+    //Identifies that currently a send request is processing
+    bool lock = false;
+    //Identifies the counter for the auto reset of retries.
     uint8_t counterAutoResetRetry = ENERGYLEAF_RETRY_AUTO_RESET;
     uint8_t retCnt = 0;
-    bool cal = false;
-    bool smlUpdate = false;
 } energyleaf;
 
 struct ENERGYLEAF_MEM {
@@ -168,6 +161,7 @@ bool XDRV_159_cmd(void);
 
 void energyleafInit(void) {
     AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: INIT 1/2"));
+    AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: MAC:[%s]"),WiFi.macAddress().c_str());
     if(!energyleafClient) {
         AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: INIT CLIENT"));
         energyleafClient = new BearSSL::WiFiClientSecure_light(1024,1024);
@@ -194,7 +188,7 @@ void energyleafInit(void) {
     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER: INIT 2/2"));
     //Try to get the token here already. The script is only sent if it has to be (the endpoint normally knows this). If no network connection is available at this time, a new attempt is made in the next second.
     
-    if(energyleaf.run == true || energyleaf.manual == true) {
+    if(energyleaf.running) {
         energyleaf.active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
     } else {
         energyleaf.active = false;
@@ -208,10 +202,10 @@ void energyleafInit(void) {
 }
 
 ENERGYLEAF_ERROR energyleafSendData(void) {
-    if(!energyleaf.run && !energyleaf.manual && !energyleaf.debug) {
+    if(!energyleaf.running && !energyleaf.debug) {
         return ENERGYLEAF_ERROR::ERROR;
     }
-    if((!energyleaf.active && energyleaf.retryCounter == 5 && (energyleaf.run || energyleaf.manual || energyleaf.debug)) || (!energyleaf.active && (energyleaf.run || energyleaf.manual || energyleaf.debug))){
+    if((!energyleaf.active && energyleaf.retryCounter == 5 && (energyleaf.running || energyleaf.debug)) || (!energyleaf.active && (energyleaf.running || energyleaf.debug))){
         AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: RETRY COUNTER LIMIT REACHED, CHECK FOR PROBLEMS AND RESTART SENSOR IF FIXED [COUNTER:%d]"),energyleaf.retryCounter);
         return ENERGYLEAF_ERROR::ERROR;
     }
@@ -255,7 +249,7 @@ ENERGYLEAF_ERROR energyleafSendData(void) {
 }
 
 ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
-    if(!energyleaf.run && !energyleaf.manual && !energyleaf.debug) {
+    if(!energyleaf.running && !energyleaf.debug) {
         return ENERGYLEAF_ERROR::RET;
     }
     if(energyleafClient) {
@@ -338,6 +332,9 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                             } else {
                                 AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - GOT A %d STATUS"),headerStatusCode);
                                 //return ENERGYLEAF_ERROR::ERROR; //If a special status is known that results in no body here we can return direct
+                                if(energyleafClient->connected()){
+                                    energyleafClient->stop(); 
+                                }
                                 if(headerStatusCode == ENERGYLEAF_TOKEN_EXPIRED_CODE) {
                                     return ENERGYLEAF_ERROR::TOKEN_EXPIRED;
                                 } else {
@@ -478,10 +475,11 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
 }
 
 ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
-    if(!energyleaf.run && !energyleaf.manual && !energyleaf.debug) {
+    if(!energyleaf.running && !energyleaf.debug) {
         return ENERGYLEAF_ERROR::RET;
     }
     if(energyleafClient) {
+        yield();
         //fresh start and the default script is loaded, not the script of the sensor.
         AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: PREPARING REQUEST FOR TOKEN%s"),energyleaf.needScript ? " AND FORCING SCRIPT" : "");
         if(WiFi.status() == WL_CONNECTED) {
@@ -498,7 +496,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     TokenRequest tokenRequest = TokenRequest_init_default;
                     //collect the MAC of this sensor
                     memcpy(tokenRequest.client_id, WiFi.macAddress().c_str(), sizeof(tokenRequest.client_id));
-                    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: USED MAC [%s]"),tokenRequest.client_id);
+                    AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: USED MAC [%s]"),tokenRequest.client_id);
                     //set the type of this sensor
                     tokenRequest.type = energyleaf.type;
                     //if true it forces the server to (re-)send the script in the response
@@ -506,7 +504,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     tokenRequest.has_need_script = energyleaf.needScript;
                     streamTokenRequestOut = pb_ostream_from_buffer(bufferTokenRequest, sizeof(bufferTokenRequest));
 
-                    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: NEED SCRIPT [%s]"),tokenRequest.need_script ? "true" : "false");
+                    AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: NEED SCRIPT [%s]"),tokenRequest.need_script ? "true" : "false");
 
                 
                     state = pb_encode(&streamTokenRequestOut,TokenRequest_fields, &tokenRequest);
@@ -517,10 +515,13 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     return ENERGYLEAF_ERROR::ERROR;
                 }
 
-                AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: pb_encode successful"));
+                AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: pb_encode successful"));
 
                 //Send TokenRequest and process received header
                 {
+                    ESP.wdtFeed();
+                    yield();
+                    AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [%d][%d]"),ESP.getFreeContStack(),ESP.getFreeHeap());
                     state = energyleaf.certLoaded && energyleafClient->connect(energyleaf.host,energyleaf.port);
                     if(!state) {
                         if(energyleafClient->connected()){
@@ -529,7 +530,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE"));
                         return ENERGYLEAF_ERROR::ERROR;
                     }
-
+                    
                     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: CONNECTED TO ENERGYLEAF SERIVCE"));
 
                     energyleafClient->write_P(PSTR("POST /api/v1/token HTTP/1.1\r\n"));
@@ -566,6 +567,9 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                             } else {
                                 AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - GOT A %d STATUS"),headerStatusCode);
                                 //return ENERGYLEAF_ERROR::ERROR; //If a special status is known that results in no body here we can return direct
+                                if(energyleafClient->connected()){
+                                    energyleafClient->stop(); 
+                                }
                                 if(headerStatusCode == ENERGYLEAF_TOKEN_EXPIRED_CODE) {
                                     return ENERGYLEAF_ERROR::TOKEN_EXPIRED;
                                 } else {
@@ -695,10 +699,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                 //Store Script and the Parameter from the TokenResponse
                 {
                     AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: SUCCESSFUL"));
-                    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [TOKEN:%s]"),tokenResponse.access_token);
-                    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [STATUS:%d]"),tokenResponse.status);
-                    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [SCRIPT:%s]"),tokenResponse.has_script ? "true" : "false");
-                    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [SCRIPT:%s]"),tokenResponse.script);
+                    AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [TOKEN:%s]"),tokenResponse.access_token);
+                    AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [STATUS:%d]"),tokenResponse.status);
+                    AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [SCRIPT:%s]"),tokenResponse.has_script ? "true" : "false");
+                    AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [SCRIPT:%s]"),tokenResponse.script);
 
                     
                     strcpy(energyleaf.accessToken, tokenResponse.access_token);
@@ -801,44 +805,64 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 
 void energyleafEverySecond(void) {
     yield();
-    if(energyleaf.run == false && energyleaf.manual == false && energyleaf.debug == false) return;
-    if(!energyleaf.active || (energyleaf.active &&  energyleaf.expiresIn <= 0)) {
-        //Check whether the sensor is in the initial state (!active) or is active and its counter has expired (expiresIn == 0)
-        if(!energyleaf.active) {
-            if(energyleaf.counterAutoResetRetry > 0) {
-                --energyleaf.counterAutoResetRetry;
-            } else {
-                energyleaf.counterAutoResetRetry = ENERGYLEAF_RETRY_AUTO_RESET;
-                energyleaf.retryCounter = 0;
-            }
-        }
+    if(!energyleaf.running && !energyleaf.debug) {
+        return;
+    }
 
-        if(!energyleaf.active && energyleaf.retryCounter == 5){
-            AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: RETRY COUNTER LIMIT REACHED, CHECK FOR PROBLEMS AND RESTART SENSOR IF FIXED [COUNTER:%d]"),energyleaf.retryCounter);
-            return;
-        }
+    if(!energyleaf.active) {
+        //driver not active (no token)
 
-        AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: NOT ACTIVE OR COUNTER EXPIRED [ACTIVE:%s;COUNTER:%d]"),energyleaf.active ? "true":"false",energyleaf.expiresIn);
-        energyleaf.active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
-        if(!energyleaf.active) {
-            ++energyleaf.retryCounter;
-        }
-        if(energyleaf.active) {
+        //auto reset of retries
+        if(energyleaf.counterAutoResetRetry > 0) {
+            --energyleaf.counterAutoResetRetry;
+        } else {
             energyleaf.counterAutoResetRetry = ENERGYLEAF_RETRY_AUTO_RESET;
             energyleaf.retryCounter = 0;
         }
+
+        //check that only a specific amount of retries is done
+        if(energyleaf.retryCounter == 5) {
+            AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: RETRY COUNTER LIMIT REACHED, CHECK FOR PROBLEMS AND RESTART SENSOR IF FIXED [COUNTER:%d]"),energyleaf.retryCounter);
+            return;
+        } else {
+            if(energyleaf.retryCounter==0) {
+                energyleaf.active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
+            }
+            ++energyleaf.retryCounter;
+            return;
+        }
     } else {
-        --energyleaf.expiresIn;
-    }
-    //AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: NOT ACTIVE OR COUNTER EXPIRED [cal:%s]"),energyleaf.cal ? "true":"false");
-    if(energyleaf.manual && bitRead(Settings->rule_enabled, 0) && energyleaf.cal == false && WiFi.isConnected()) {
-        //if(energyleaf.manualCurrentCounter <= 0) {
-        energyleaf.cal = true;
-        XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
-            //energyleaf.manualCurrentCounter = energyleaf.manualMaxCounter;
-        /*} else {
-            --energyleaf.manualCurrentCounter;
-        }*/
+        //driver is active (have token)
+
+        //verify if a new token is needed (expired)
+        if(energyleaf.expiresIn <= 0) {
+            energyleaf.active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
+            if(!energyleaf.active) {
+                return;
+            }
+        } else {
+            --energyleaf.expiresIn;
+        }
+
+        #ifdef ENERGYLEAF_TEST_INSTANCE
+        energyleaf.smlUpdate = true;
+        #endif
+
+        //request sensor to send new data (driver is running, script is enable, no lock is set and wifi is connected)
+        if(energyleaf.running && bitRead(Settings->rule_enabled,0) && !energyleaf.lock && WiFi.isConnected()) {
+            energyleaf.lock = true;
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: SML-Update [%s] - REQUEST SENDING"),energyleaf.smlUpdate ? "true" : "false");
+            XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
+            if(energyleaf.lock) energyleaf.lock = false;
+        } else {
+            if(energyleaf.running) {
+                //force new script;
+                energyleaf.needScript = true;
+                AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: SML-Update [%s]"),energyleaf.smlUpdate ? "true" : "false");
+                energyleaf.active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
+                return;
+            }
+        }
     }
 }
 
@@ -855,32 +879,25 @@ bool XDRV_159_cmd(void) {
             ++cp;
             if(*cp == 's') {
                 //SENSOR
-                if(energyleaf.run == false && energyleaf.manual == false && energyleaf.debug == false) {
-                    energyleaf.run = true;
+                if(!energyleaf.running && !energyleaf.debug) {
+                    energyleaf.running = true;
                     ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"START - SENSOR\"}}"));
-                }
-            } else if(*cp == 'd') {
-                //DRIVER
-                if(energyleaf.run == false && energyleaf.manual == false && energyleaf.debug == false) {
-                    energyleaf.manual = true;
-                    ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"START - DRIVER\"}}"));
                 }
             } else if(*cp == 't') {
                 //DEBUG / TEST
-                if(energyleaf.run == false && energyleaf.manual == false && energyleaf.debug == false) {
+                if(!energyleaf.running && !energyleaf.debug) {
                     energyleaf.debug = true;
                     ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"START - DEBUG\"}}"));
                 }
             }
         } else if(*cp == 's') {
             //STOP
-            energyleaf.run = false;
-            energyleaf.manual = false;
+            energyleaf.running = false;
             energyleaf.debug = false;
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"STOP\"}}"));
         } else if(*cp == 'v') {
             //VERIFY / TEST
-            if(energyleaf.run == false) {
+            if(!energyleaf.running) {
                 energyleaf_mem.value = 10;
                 energyleafSendData();
                 ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"VERIFY / TEST\"}}"));
@@ -913,7 +930,7 @@ bool XDRV_159_cmd(void) {
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"FORCE SCRIPT\"}}"));
         } else if(*cp == 'c') {
             //CONFIG
-            if(energyleaf.run == true || energyleaf.manual == true || energyleaf.debug == true) {
+            if(energyleaf.running || energyleaf.debug) {
                 return ret;
             }
             ++cp;
@@ -933,33 +950,17 @@ bool XDRV_159_cmd(void) {
                     AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: NEW KEYWORD [%s]"),energyleaf.identifier);
                     ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"COFNIG - IDENTIFIER\"}}"));
                 }
-            } else if(*cp == 'c') {
-                //COUNTER
-                cp += 2;
-                char counter[3];
-                for(uint8_t i = 0; i < sizeof(counter); ++i) {
-                    if(cp == NULL) {
-                        counter[i] = 0;
-                        break;
-                    }
-                    counter[i] = *cp++;
-                }
-                energyleaf.manualMaxCounter = atoi(counter);
-                AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: NEW COUNTER [%d]"),energyleaf.manualMaxCounter);
-                ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"COFNIG - MANUALMAXCOUNTER\"}}"));
             }
         } else if(*cp == 'a') {
             //ADJUST / RESET
             energyleaf.retryCounter = 0;
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"RESET RETRYCOUNTER\"}}"));
         } else if(*cp == 'i') {
-            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: run [%s]"),energyleaf.run ? "true" : "false");
-            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: initial [%s]"),energyleaf.initial ? "true" : "false");
+            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: run [%s]"),energyleaf.running ? "true" : "false");
             AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: token [%s]"),energyleaf.accessToken);
             AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: expires in [%d] seconds"),energyleaf.expiresIn);
             AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: active [%s]"),energyleaf.active ? "true" : "false");
             AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: identifier [%s]"),energyleaf.identifier);
-            AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: manual  [%s]"),energyleaf.manual   ? "true" : "false");
             AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: debug [%s]"),energyleaf.debug   ? "true" : "false");
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"PRINTING INFORMATION OF DRIVER\"}}"));
         }

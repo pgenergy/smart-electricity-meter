@@ -4622,11 +4622,11 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
           char output[20];
           dtostrf(sml_globs.meter_vars[index],sizeof(output) - 1,dp,output);
           if(print) {
-            AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE [%s]"),output);
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE [%s]"),output);
           } else {
             #ifndef ENERGYLEAF_TEST_INSTANCE
             energyleaf_mem.value = doubleToFloat(sml_globs.meter_vars[index]);
-            AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
             #endif
             ESP.wdtFeed();
             yield();
@@ -4636,12 +4636,12 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
               } else { 
                 ++energyleaf.retCnt;
                 energyleaf.smlUpdate = false;
-                energyleaf.cal = false;
+                energyleaf.lock = false;
                 return;
               }
             } else {
               if(!energyleaf.smlUpdate) {
-                energyleaf.cal = false;
+                energyleaf.lock = false;
                 return;
               } else {
                 energyleaf.retCnt = 0;
@@ -4661,8 +4661,14 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
             wifi_fpm_set_sleep_type(LIGHT_SLEEP_T); 
             wifi_fpm_set_wakeup_cb(wakeupCallback); 
             wifi_fpm_open(); 
-            wifi_fpm_do_sleep(sleepTimeSeconds * 1000 * 1000);
-            delay((sleepTimeSeconds * 1000) + 1);
+            wifi_fpm_do_sleep(5 * 1000 * 1000);
+            delay((5 * 1000) + 1);
+            ESP.wdtFeed();
+            yield();
+            wifi_fpm_do_sleep(5 * 1000 * 1000);
+            delay((5 * 1000) + 1);
+            ESP.wdtFeed();
+            yield();
             wifi_fpm_do_sleep(5 * 1000 * 1000);
             delay((5 * 1000) + 1);
             ESP.wdtFeed();
@@ -4673,21 +4679,9 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
             WifiEnable();
             WifiConnect();
 
-            if(energyleaf.cal) {
-              energyleaf.cal = false;
+            if(energyleaf.lock) {
+              energyleaf.lock = false;
             }
-
-            //WiFi.setSleepMode(WIFI_LIGHT_SLEEP);
-            //WiFi.forceSleepBegin();
-            //delay(1000);
-            //WiFi.forceSleepWake();
-
-            /*wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);
-            wifi_fpm_open();
-            wifi_fpm_do_sleep(15000000);*/
-
-            //delay(500);
-
           }
         }
       }
@@ -4768,8 +4762,8 @@ bool Xsns53(uint32_t function) {
         }
         break;
       case FUNC_ENERGYLEAF_SEND:
-        AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: GOT COMMAND TO SEND DATA! %s"), sml_globs.ready ? "true" : "false");
-        if (sml_globs.ready && (energyleaf.manual || energyleaf.debug)) {
+        AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: GOT COMMAND TO SEND DATA! %s"), sml_globs.ready ? "true" : "false");
+        if (sml_globs.ready && energyleaf.smlUpdate && (energyleaf.running || energyleaf.debug)) {
           SML_Energyleaf(false);
         }
         break;
