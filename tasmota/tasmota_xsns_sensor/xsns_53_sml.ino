@@ -4680,6 +4680,12 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
               wifi_station_connect();
               WifiEnable();
               WifiConnect();
+            } else {
+              for(size_t i = 0; i <= ENERGYLEAF_SLEEP_ITERATIONS; ++i) {
+                delay(ENERGYLEAF_SLEEP_SECONDS * 1000);
+                ESP.wdtFeed();
+                yield();
+              }
             }
 
             ESP.wdtFeed();

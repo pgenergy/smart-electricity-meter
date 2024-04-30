@@ -15,7 +15,7 @@
 #endif
 
 #ifndef ENERGYLEAF_DRIVER_AUTO_FULL_RUN
-#define ENERGYLEAF_DRIVER_AUTO_FULL_RUN false
+#define ENERGYLEAF_DRIVER_AUTO_FULL_RUN true
 #endif
 
 #ifndef ENERGYLEAF_DRIVER_COUNTER
@@ -44,7 +44,7 @@
 #endif
 
 #ifndef ENERGYLEAF_SLEEP_ITERATIONS
-#define ENERGYLEAF_SLEEP_ITERATIONS 4
+#define ENERGYLEAF_SLEEP_ITERATIONS 3
 #endif
 
 //Value that identifies the # times the sensor trys to get a correct (approvable) sensor reading.
@@ -910,7 +910,7 @@ void energyleafEverySecond(void) {
             XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
             if(energyleaf.lock) energyleaf.lock = false;
         } else {
-            if(energyleaf.running) {
+            if(energyleaf.running && energyleaf.full_running) {
                 //force new script;
                 energyleaf.needScript = true;
                 AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: SML-Update [%s]"),energyleaf.smlUpdate ? "true" : "false");
