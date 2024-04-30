@@ -31,6 +31,18 @@
 #define ENERGYLEAF_RETRY_AUTO_RESET 30
 #endif
 
+#ifndef ENERGYLEAF_SLEEP
+#define ENERGYLEAF_SLEEP
+#endif
+
+#ifndef ENERGYLEAF_SLEEP_SECONDS
+#define ENERGYLEAF_SLEEP_SECONDS 4
+#endif
+
+#ifndef ENERGYLEAF_SLEEP_ITERATIONS
+#define ENERGYLEAF_SLEEP_ITERATIONS 4
+#endif
+
 //Value that identifies the # times the sensor trys to get a correct (approvable) sensor reading.
 #ifndef ENERGYLEAF_CNT_MAX
 #define ENERGYLEAF_CNT_MAX 5
