@@ -19,9 +19,9 @@
 #endif
 
 //Enable following if the sensor should send each time to test, 0.1 kWh.
-/*#ifndef ENERGYLEAF_TEST_INSTANCE
+#ifndef ENERGYLEAF_TEST_INSTANCE
 #define ENERGYLEAF_TEST_INSTANCE
-#endif*/
+#endif
 
 #ifndef ENERGYLEAF_RETRY_AUTO_RESET
 #define ENERGYLEAF_RETRY_AUTO_RESET 30
@@ -180,7 +180,7 @@ void energyleafInit(void) {
             //Currently not directly used. Maybe used in the future
             energyleaf.active = false;
             energyleaf.needScript = true;
-        } else if (bitRead(Settings->rule_enabled,0) == 0) { //if script not enable, get update and activate
+        } else if (bitRead(Settings->rule_enabled,0) == 0) { //if script not enable, activate it
             energyleaf.active = false;
             bitWrite(Settings->rule_enabled, 0, 1);
         }
@@ -882,10 +882,10 @@ void energyleafEverySecond(void) {
         if(energyleaf.running && bitRead(Settings->rule_enabled,0) && !energyleaf.lock && WiFi.isConnected()) {
             energyleaf.lock = true;
             digitalWrite(2,HIGH);
-            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: SML-Update [%s] - REQUEST SENDING"),energyleaf.smlUpdate ? "true" : "false");
-            XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
             delay(500);
             digitalWrite(2,LOW);
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: SML-Update [%s] - REQUEST SENDING"),energyleaf.smlUpdate ? "true" : "false");
+            XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
             if(energyleaf.lock) energyleaf.lock = false;
         } else {
             if(energyleaf.running) {
@@ -893,6 +893,9 @@ void energyleafEverySecond(void) {
                 energyleaf.needScript = true;
                 AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: SML-Update [%s]"),energyleaf.smlUpdate ? "true" : "false");
                 energyleaf.active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
+                if (bitRead(Settings->rule_enabled,0) == 0) {
+                    bitWrite(Settings->rule_enabled, 0, 1);
+                }
                 return;
             }
         }
