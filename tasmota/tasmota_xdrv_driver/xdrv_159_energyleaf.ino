@@ -36,7 +36,7 @@
 #endif
 
 #ifndef ENERGYLEAF_SLEEP
-#define ENERGYLEAF_SLEEP
+#define ENERGYLEAF_SLEEP true
 #endif
 
 #ifndef ENERGYLEAF_SLEEP_SECONDS
@@ -137,6 +137,7 @@ const uint8_t TA_SIZE PROGMEM = 1;
 struct ENERGYLEAF_STATE {
     bool running = ENERGYLEAF_DRIVER_AUTO_RUN;
     bool full_running = ENERGYLEAF_DRIVER_AUTO_FULL_RUN;
+    bool sleep = ENERGYLEAF_SLEEP;
     bool debug = false;
     //Current token of the sensor
     char accessToken[45]; 
@@ -957,6 +958,16 @@ bool XDRV_159_cmd(void) {
             energyleaf.debug = false;
             energyleaf.full_running = false;
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"STOP\"}}"));
+        } else if(*cp == 'e') {
+            //swap sleep mode
+            ++cp;
+            if(*cp == '0'){
+                energyleaf.sleep = false;
+                ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"SLEEP - OFF\"}}"));
+            } else if (*cp == '1') {
+                energyleaf.sleep = true;
+                ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"SLEEP - ON\"}}"));
+            }
         } else if(*cp == 'v') {
             //VERIFY / TEST
             energyleaf_mem.value = energyleaf_mem.last_value + 0.15;
