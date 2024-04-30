@@ -27,6 +27,10 @@
 #define ENERGYLEAF_TEST_INSTANCE
 #endif
 
+#ifndef ENERGYLEAF_TEST_INSTANCE_VALUE
+#define ENERGYLEAF_TEST_INSTANCE_VALUE 1.5f
+#endif
+
 #ifndef ENERGYLEAF_RETRY_AUTO_RESET
 #define ENERGYLEAF_RETRY_AUTO_RESET 30
 #endif
@@ -231,7 +235,7 @@ ENERGYLEAF_ERROR energyleafSendData(void) {
         if(energyleaf_mem.value == 0.f) {
             energyleaf_mem.value = energyleaf_mem.last_value;
         }
-        energyleaf_mem.value = energyleaf_mem.value + 0.1f;
+        energyleaf_mem.value = energyleaf_mem.value + ENERGYLEAF_TEST_INSTANCE_VALUE;
     #endif
     if(energyleaf_mem.value == 0.f) {
         char output[20];
