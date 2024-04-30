@@ -14,6 +14,10 @@
 #define ENERGYLEAF_DRIVER_AUTO_RUN true
 #endif
 
+#ifndef ENERGYLEAF_DRIVER_AUTO_FULL_RUN
+#define ENERGYLEAF_DRIVER_AUTO_FULL_RUN false
+#endif
+
 #ifndef ENERGYLEAF_DRIVER_COUNTER
 #define ENERGYLEAF_DRIVER_COUNTER 15
 #endif
@@ -116,6 +120,7 @@ const uint8_t TA_SIZE PROGMEM = 1;
 
 struct ENERGYLEAF_STATE {
     bool running = ENERGYLEAF_DRIVER_AUTO_RUN;
+    bool full_running = ENERGYLEAF_DRIVER_AUTO_FULL_RUN;
     bool debug = false;
     //Current token of the sensor
     char accessToken[45]; 
@@ -879,7 +884,7 @@ void energyleafEverySecond(void) {
         #endif
 
         //request sensor to send new data (driver is running, script is enable, no lock is set and wifi is connected)
-        if(energyleaf.running && bitRead(Settings->rule_enabled,0) && !energyleaf.lock && WiFi.isConnected()) {
+        if(energyleaf.running && energyleaf.full_running && bitRead(Settings->rule_enabled,0) && !energyleaf.lock && WiFi.isConnected()) {
             energyleaf.lock = true;
             digitalWrite(2,HIGH);
             delay(500);
@@ -925,11 +930,16 @@ bool XDRV_159_cmd(void) {
                     energyleaf.debug = true;
                     ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"START - DEBUG\"}}"));
                 }
+            } else if(*cp == 'f') {
+                if(energyleaf.running) {
+                    energyleaf.full_running = true;
+                }
             }
         } else if(*cp == 's') {
             //STOP
             energyleaf.running = false;
             energyleaf.debug = false;
+            energyleaf.full_running = false;
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"STOP\"}}"));
         } else if(*cp == 'v') {
             //VERIFY / TEST
