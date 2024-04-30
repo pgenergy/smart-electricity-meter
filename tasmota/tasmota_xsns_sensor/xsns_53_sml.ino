@@ -4652,9 +4652,12 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
 
             Serial.flush();
             energyleaf.smlUpdate = false;
+
+            #ifdef ENERGYLEAF_SLEEP
+            
             //WiFi.mode(WIFI_OFF);
             extern os_timer_t *timer_list; 
-            for(size_t i = 0; i <= 3; ++i) {
+            for(size_t i = 0; i <= ENERGYLEAF_SLEEP_ITERATIONS; ++i) {
               WifiDisable();
               wifi_station_disconnect();
               wifi_set_opmode(NULL_MODE);
@@ -4662,14 +4665,14 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
               wifi_fpm_set_sleep_type(LIGHT_SLEEP_T); 
               wifi_fpm_open(); 
               wifi_fpm_set_wakeup_cb(wakeupCallback); 
-              if(wifi_fpm_do_sleep(4 * 1000 * 1000) != 0/*ESP_OK*/) {
+              if(wifi_fpm_do_sleep(ENERGYLEAF_SLEEP_SECONDS * 1000 * 1000) != 0/*ESP_OK*/) {
                 //if sleep failes it breaks the loop.
                 AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: No Sleep possible."));
                 ESP.wdtFeed();
                 yield();
                 break;
               }
-              delay((4 * 1000) + 1);
+              delay((ENERGYLEAF_SLEEP_SECONDS * 1000) + 1);
               ESP.wdtFeed();
               yield();
             }
@@ -4678,6 +4681,8 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
             wifi_station_connect();
             WifiEnable();
             WifiConnect();
+
+            #endif
 
             ESP.wdtFeed();
             yield();
