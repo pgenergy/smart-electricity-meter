@@ -36,7 +36,7 @@
 #endif
 
 #ifndef ENERGYLEAF_SLEEP
-#define ENERGYLEAF_SLEEP true
+#define ENERGYLEAF_SLEEP false
 #endif
 
 #ifndef ENERGYLEAF_SLEEP_SECONDS
@@ -143,6 +143,7 @@ struct ENERGYLEAF_STATE {
     char accessToken[45]; 
     //Lifetime counter of the token (decreases)
     uint32_t expiresIn = 0;
+    uint32_t timer = ENERGYLEAF_SLEEP_SECONDS * ENERGYLEAF_SLEEP_ITERATIONS;
     //State if the sensor got min. one token already 
     bool active = false;
     //State if certificates for secured connection are loaded
@@ -317,7 +318,12 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
 
                 //Send SensorDataRequest and process received header
                 {
-                    state = energyleaf.certLoaded && energyleafClient->connect(energyleaf.host,energyleaf.port);
+                    state = energyleaf.certLoaded;
+                    if(!state) {
+                        AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE - NO CERT LOADED"));
+                        return ENERGYLEAF_ERROR::ERROR;
+                    }
+                    state = energyleafClient->connect(energyleaf.host,energyleaf.port);
                     if(!state) {
                         if(energyleafClient->connected()){
                             energyleafClient->stop(); 
@@ -902,6 +908,15 @@ void energyleafEverySecond(void) {
 
         //request sensor to send new data (driver is running, script is enable, no lock is set and wifi is connected)
         if(energyleaf.running && energyleaf.full_running && bitRead(Settings->rule_enabled,0) && !energyleaf.lock && WiFi.isConnected()) {
+            if(!energyleaf.sleep){
+                if(energyleaf.timer <= 0) {
+                    AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: TIMER EXPIRED - FORWARD"));
+                    energyleaf.timer = ENERGYLEAF_SLEEP_SECONDS * ENERGYLEAF_SLEEP_ITERATIONS;
+                } else {
+                    --energyleaf.timer;
+                    return;
+                }
+            }
             energyleaf.lock = true;
             digitalWrite(2,HIGH);
             delay(500);
