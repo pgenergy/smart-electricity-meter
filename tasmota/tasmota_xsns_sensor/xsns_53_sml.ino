@@ -4610,7 +4610,7 @@ char* energyleafFindSmlIdentifierChooper(char *mp) {
         // 2: kWh,ENERGYLEAF_KWH,4
         // 3: ENERGYLEAF_KWH,4
 
-        if (i == 3 && strncmp(find_start, energyleaf.identifier, sizeof(energyleaf.identifier))) {
+        if (i == 3 && strncmp(find_start, energyleaf.identifier, sizeof(energyleaf.identifier)) == 0) {
             return find_start;
         }
     }
