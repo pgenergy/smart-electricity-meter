@@ -142,8 +142,8 @@ struct ENERGYLEAF_STATE {
     //Current token of the sensor
     char accessToken[45]; 
     //Lifetime counter of the token (decreases)
-    uint32_t expiresIn = 0;
-    uint32_t timer = ENERGYLEAF_SLEEP_SECONDS * ENERGYLEAF_SLEEP_ITERATIONS;
+    uint16_t expiresIn = 0;
+    uint8_t timer = ENERGYLEAF_SLEEP_SECONDS * ENERGYLEAF_SLEEP_ITERATIONS;
     //State if the sensor got min. one token already 
     bool active = false;
     //State if certificates for secured connection are loaded
@@ -277,6 +277,8 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
         return ENERGYLEAF_ERROR::RET;
     }
     if(energyleafClient) {
+        ESP.wdtFeed();
+        yield();
         if(WiFi.status() == WL_CONNECTED) {
             digitalWrite(2,HIGH);
             delay(100);
@@ -515,6 +517,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
         return ENERGYLEAF_ERROR::RET;
     }
     if(energyleafClient) {
+        ESP.wdtFeed();
         yield();
         //fresh start and the default script is loaded, not the script of the sensor.
         AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: PREPARING REQUEST FOR TOKEN%s"),energyleaf.needScript ? " AND FORCING SCRIPT" : "");
