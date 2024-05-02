@@ -4591,72 +4591,85 @@ void SML_Energyleaf(bool print) {
   }  
 }
 
+char* energyleafFindSmlIdentifierChooper(char *mp) {
+    char *find_start, *find_end;
+
+    for (unit8_t i = 0; i < 4; i++) {
+        if (!find_start) {
+            find_end = strchr(mp, ',');
+        } else {
+            find_end = strchr(find_start, ',');
+        }
+
+        if (!find_end) {
+            return NULL;
+        }
+        find_start = find_end + 1;
+        // 0: 77070100010800ff@1000,Consumption (Total),kWh,ENERGYLEAF_KWH,4 
+        // 1: Consumption (Total),kWh,ENERGYLEAF_KWH,4
+        // 2: kWh,ENERGYLEAF_KWH,4
+        // 3: ENERGYLEAF_KWH,4
+
+        if (i == 3 && strncmp(find_start, energyleaf.identifier, sizeof(energyleaf.identifier))) {
+            return find_start;
+        }
+    }
+
+    return NULL;
+}
+
 #define sleepTimeSeconds 10
 
 //based on SML_Immediate_MQTT
 //example: 1,77070100010800ff@1000,Consumption (Total),kWh,ENERGYLEAF_KWH,4
-void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, bool print) {
-  char jname[24];
+void energyleafFindSmlIdentifier(const char *mp,uint8_t index,uint8_t mindex, bool print) {
+    char *cp = energyleaf_find_sml(mp);
+    if (!cp) {
+        return;
+    }
 
-  char *cp = strchr(mp,',');
-  //cp = ,Consumption (Total),kWh,ENERGYLEAF_KWH,4
-  if(cp) {
-    cp = strchr(++cp,',');
-    //cp = ,kWh,ENERGYLEAF_KWH,4
-    if(cp) {
-      cp = strchr(++cp,',');
-      //cp = ,ENERGYLEAF_KWH,4
-      if(cp) {
-        ++cp;
-        for(uint8_t i = 0; i < sizeof(jname); ++i) {
-          if(*cp == ',') {
-            jname[i] = 0;
-            break;
-          }
-          jname[i] = *cp++;
-        }
-        //jname = ENERGYLEAF_KWH
-        ++cp;
-        if(strcmp(jname,energyleaf.identifier) == 0) {
-          uint8_t dp = atoi(cp);
-          char output[20];
-          dtostrf(sml_globs.meter_vars[index],sizeof(output) - 1,dp,output);
-          if(print) {
-            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE [%s]"),output);
-          } else {
-            #ifndef ENERGYLEAF_TEST_INSTANCE
+    uint8_t dp = atoi(cp);
+    char output[20];
+    dtostrf(sml_globs.meter_vars[index],sizeof(output) - 1,dp,output);
+
+    if(print) {
+        AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE [%s]"),output);
+    } else {
+        #ifndef ENERGYLEAF_TEST_INSTANCE
             energyleaf_mem.value = doubleToFloat(sml_globs.meter_vars[index]);
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
-            #endif
-            ESP.wdtFeed();
-            yield();
-            if(energyleaf.smlUpdate && energyleafSendData() == ENERGYLEAF_ERROR::RET) {
-              if(energyleaf.retCnt >= ENERGYLEAF_CNT_MAX){
+        #endif
+
+        ESP.wdtFeed();
+        yield();
+
+        if(energyleaf.smlUpdate && energyleafSendData() == ENERGYLEAF_ERROR::RET) {
+            if(energyleaf.retCnt >= ENERGYLEAF_CNT_MAX){
                 energyleaf.retCnt = 0;
-              } else { 
+            } else { 
                 ++energyleaf.retCnt;
                 energyleaf.smlUpdate = false;
                 energyleaf.lock = false;
                 return;
-              }
-            } else {
-              if(!energyleaf.smlUpdate) {
+            }
+        } else {
+            if(!energyleaf.smlUpdate) {
                 energyleaf.lock = false;
                 return;
-              } else {
+            } else {
                 energyleaf.retCnt = 0;
-              }
             }
+        }
 
-            delay(500);
+        delay(500);
 
-            Serial.flush();
-            energyleaf.smlUpdate = false;
+        Serial.flush();
+        energyleaf.smlUpdate = false;
 
-            if(energyleaf.sleep) {
-              //WiFi.mode(WIFI_OFF);
-              extern os_timer_t *timer_list; 
-              for(size_t i = 0; i <= ENERGYLEAF_SLEEP_ITERATIONS; ++i) {
+        if(energyleaf.sleep) {
+            //WiFi.mode(WIFI_OFF);
+            extern os_timer_t *timer_list; 
+            for(size_t i = 0; i <= ENERGYLEAF_SLEEP_ITERATIONS; ++i) {
                 WifiDisable();
                 wifi_station_disconnect();
                 wifi_set_opmode(NULL_MODE);
@@ -4664,35 +4677,33 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
                 wifi_fpm_set_sleep_type(LIGHT_SLEEP_T); 
                 wifi_fpm_open(); 
                 wifi_fpm_set_wakeup_cb(wakeupCallback); 
-                  if(wifi_fpm_do_sleep(ENERGYLEAF_SLEEP_SECONDS * 1000 * 1000) != 0/*ESP_OK*/) {
-                  //if sleep failes it breaks the loop.
-                  AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: No Sleep possible."));
-                  ESP.wdtFeed();
-                  yield();
-                  break;
+                if(wifi_fpm_do_sleep(ENERGYLEAF_SLEEP_SECONDS * 1000 * 1000) != 0/*ESP_OK*/) {
+                    //if sleep failes it breaks the loop.
+                    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: No Sleep possible."));
+                    ESP.wdtFeed();
+                    yield();
+                    break;
                 }
+
                 delay((ENERGYLEAF_SLEEP_SECONDS * 1000) + 1);
                 ESP.wdtFeed();
                 yield();
-              }
-              wifi_fpm_close();
-              wifi_set_opmode(STATION_MODE);
-              wifi_station_connect();
-              WifiEnable();
-              WifiConnect();
             }
 
-            ESP.wdtFeed();
-            yield();
-
-            if(energyleaf.lock) {
-              energyleaf.lock = false;
-            }
-          }
+            wifi_fpm_close();
+            wifi_set_opmode(STATION_MODE);
+            wifi_station_connect();
+            WifiEnable();
+            WifiConnect();
         }
-      }
+
+        ESP.wdtFeed();
+        yield();
+
+        if(energyleaf.lock) {
+            energyleaf.lock = false;
+        }
     }
-  }
 }
 
 void wakeupCallback() { 
