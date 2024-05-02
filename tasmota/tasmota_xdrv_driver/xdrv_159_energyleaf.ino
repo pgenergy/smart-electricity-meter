@@ -278,6 +278,8 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
     }
     if(energyleafClient) {
         if(WiFi.status() == WL_CONNECTED) {
+            ESP.wdtFeed();
+            yield();
             digitalWrite(2,HIGH);
             delay(100);
             digitalWrite(2,LOW);
@@ -315,7 +317,8 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                 }
                 
                 AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: pb_encode successful"));
-
+                ESP.wdtFeed();
+                yield();
                 //Send SensorDataRequest and process received header
                 {
                     state = energyleaf.certLoaded;
@@ -328,7 +331,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                         if(energyleafClient->connected()){
                             energyleafClient->stop(); 
                         }
-                        AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE"));
+                        AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE %d"),energyleafClient.getLastError());
                         return ENERGYLEAF_ERROR::ERROR;
                     }
 
@@ -515,6 +518,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
         return ENERGYLEAF_ERROR::RET;
     }
     if(energyleafClient) {
+        ESP.wdtFeed();
         yield();
         //fresh start and the default script is loaded, not the script of the sensor.
         AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: PREPARING REQUEST FOR TOKEN%s"),energyleaf.needScript ? " AND FORCING SCRIPT" : "");
@@ -552,18 +556,17 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                 }
 
                 AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: pb_encode successful"));
-
+                ESP.wdtFeed();
+                yield();
                 //Send TokenRequest and process received header
                 {
-                    ESP.wdtFeed();
-                    yield();
                     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [%d][%d]"),ESP.getFreeContStack(),ESP.getFreeHeap());
                     state = energyleaf.certLoaded && energyleafClient->connect(energyleaf.host,energyleaf.port);
                     if(!state) {
                         if(energyleafClient->connected()){
                             energyleafClient->stop(); 
                         }
-                        AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE"));
+                        AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE %d")energyleafClient.getLastError());
                         return ENERGYLEAF_ERROR::ERROR;
                     }
                     
@@ -862,6 +865,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 }
 
 void energyleafEverySecond(void) {
+    ESP.wdtFeed();
     yield();
     if(!energyleaf.running && !energyleaf.debug) {
         return;
