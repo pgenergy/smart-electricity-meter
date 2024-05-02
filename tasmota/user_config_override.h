@@ -250,4 +250,134 @@ Examples :
 #undef SHELLY_FW_UPGRADE
 #endif
 
+#ifdef USE_IMPROV
+#undef USE_IMPROV
+#endif
+#ifdef USE_ENHANCED_GUI_WIFI_SCAN
+#undef USE_ENHANCED_GUI_WIFI_SCAN
+#endif
+#ifdef USE_EXPRESSION
+#undef USE_EXPRESSION
+#endif
+#ifdef SUPPORT_IF_STATEMENT
+#undef SUPPORT_IF_STATEMENT
+#endif
+#ifdef USE_TUYA_MCU
+#undef USE_TUYA_MCU
+#endif
+#ifdef USE_TUYA_TIME
+#undef USE_TUYA_TIME
+#endif
+#ifdef USE_LIGHT
+#undef USE_LIGHT
+#endif
+#ifdef USE_WS2812
+#undef USE_WS2812
+#endif
+#ifdef USE_MY92X1
+#undef USE_MY92X1
+#endif
+#ifdef USE_SM16716
+#undef USE_SM16716
+#endif
+#ifdef USE_SM2135
+#undef USE_SM2135
+#endif
+#ifdef USE_SM2335
+#undef USE_SM2335
+#endif
+#ifdef USE_BP1658CJ
+#undef USE_BP1658CJ
+#endif
+#ifdef USE_BP5758D
+#undef USE_BP5758D
+#endif
+#ifdef USE_SONOFF_L1
+#undef USE_SONOFF_L1
+#endif
+#ifdef USE_ELECTRIQ_MOODL
+#undef USE_ELECTRIQ_MOODL
+#endif
+#ifdef USE_LIGHT_PALETTE
+#undef USE_LIGHT_PALETTE
+#endif
+#ifdef USE_LIGHT_VIRTUAL_CT
+#undef USE_LIGHT_VIRTUAL_CT
+#endif
+#ifdef USE_DGR_LIGHT_SEQUENCE
+#undef USE_DGR_LIGHT_SEQUENCE
+#endif
+#ifdef USE_COUNTER
+#undef USE_COUNTER
+#endif
+
+#ifdef USE_DS18x20
+#undef USE_DS18x20
+#endif
+#ifdef USE_I2C
+#undef USE_I2C
+#endif
+#ifdef USE_SPI
+#undef USE_SPI
+#endif
+#ifdef USE_ENERGY_SENSOR
+#undef USE_ENERGY_SENSOR
+#endif
+#ifdef USE_ENERGY_MARGIN_DETECTION
+#undef USE_ENERGY_MARGIN_DETECTION
+#endif
+#ifdef USE_ENERGY_POWER_LIMIT
+#undef USE_ENERGY_POWER_LIMIT
+#endif
+#ifdef USE_ENERGY_DUMMY
+#undef USE_ENERGY_DUMMY
+#endif
+#ifdef USE_HLW8012
+#undef USE_HLW8012
+#endif
+#ifdef USE_CSE7766
+#undef USE_CSE7766
+#endif
+#ifdef USE_PZEM004T
+#undef USE_PZEM004T
+#endif
+#ifdef USE_CSE7766
+#undef USE_CSE7766
+#endif
+#ifdef USE_PZEM_AC
+#undef USE_PZEM_AC
+#endif
+#ifdef USE_PZEM_DC
+#undef USE_PZEM_DC
+#endif
+#ifdef USE_MCP39F501
+#undef USE_MCP39F501
+#endif
+#ifdef USE_BL09XX
+#undef USE_BL09XX
+#endif
+#ifdef USE_DHT
+#undef USE_DHT
+#endif
+#ifdef USE_IR_REMOTE
+#undef USE_IR_REMOTE
+#endif
+#ifdef USE_IR_SEND_NEC
+#undef USE_IR_SEND_NEC
+#endif
+#ifdef USE_IR_SEND_RC5
+#undef USE_IR_SEND_RC5
+#endif
+#ifdef USE_IR_SEND_RC6
+#undef USE_IR_SEND_RC6
+#endif
+#ifdef USE_IR_RECEIVE
+#undef USE_IR_RECEIVE
+#endif
+#ifdef USE_ZIGBEE_ZNP
+#undef USE_ZIGBEE_ZNP
+#endif
+#ifdef USE_SENDMAIL
+#undef USE_SENDMAIL
+#endif
 #endif  // _USER_CONFIG_OVERRIDE_H_

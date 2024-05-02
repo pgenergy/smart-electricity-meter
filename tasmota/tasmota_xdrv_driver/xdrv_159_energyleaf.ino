@@ -333,7 +333,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                         if(energyleafClient->connected()){
                             energyleafClient->stop(); 
                         }
-                        AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE %d"),energyleafClient.getLastError());
+                        AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE %d"),energyleafClient->getLastError());
                         return ENERGYLEAF_ERROR::ERROR;
                     }
 
@@ -568,7 +568,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         if(energyleafClient->connected()){
                             energyleafClient->stop(); 
                         }
-                        AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE %d")energyleafClient.getLastError());
+                        AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE %d"),energyleafClient->getLastError());
                         return ENERGYLEAF_ERROR::ERROR;
                     }
                     
