@@ -44,7 +44,7 @@
 #endif
 
 #ifndef ENERGYLEAF_SLEEP_ITERATIONS
-#define ENERGYLEAF_SLEEP_ITERATIONS 3
+#define ENERGYLEAF_SLEEP_ITERATIONS 5
 #endif
 
 //Value that identifies the # times the sensor trys to get a correct (approvable) sensor reading.
