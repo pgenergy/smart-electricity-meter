@@ -4573,7 +4573,7 @@ void SML_Energyleaf(bool print) {
 
   if (!sml_globs.meters_used) return;
   AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("ENERGYLEAF_SENSOR: DATA %s"),mp);
-
+  energyleaf.dataRdy = false;
   while(mp != NULL) {
     if(*mp == 0) break;
 
@@ -4588,10 +4588,71 @@ void SML_Energyleaf(bool print) {
 
     mp = strchr(mp, '|');
     if (mp) ++mp;
-  }  
-}
+  }
 
-#define sleepTimeSeconds 10
+  if (energyleaf.smlUpdate && energyleafSendData() == ENERGYLEAF_ERROR::RET) {
+      //Force to recalculate the values the next try.
+      energyleaf_mem.value = 0.f;
+      if (energyleaf.retCnt >= ENERGYLEAF_CNT_MAX) {
+          energyleaf.retCnt = 0;
+      } else {
+          ++energyleaf.retCnt;
+          energyleaf.smlUpdate = false;
+          energyleaf.lock = false;
+          return;
+      }
+  } else {
+      //Force to recalculate the values the next try.
+      energyleaf_mem.value = 0.f;
+      if (!energyleaf.smlUpdate) {
+          energyleaf.lock = false;
+          return;
+      } else {
+          energyleaf.retCnt = 0;
+      }
+  }
+
+  energyleaf.smlUpdate = false;
+
+  if (energyleaf.sleep) {
+      delay(500);
+      Serial.flush();
+      extern os_timer_t *timer_list;
+      for (size_t i = 0; i <= ENERGYLEAF_SLEEP_ITERATIONS; ++i) {
+          WifiDisable();
+          wifi_station_disconnect();
+          wifi_set_opmode(NULL_MODE);
+          timer_list = nullptr;
+          wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);
+          wifi_fpm_open();
+          wifi_fpm_set_wakeup_cb(wakeupCallback);
+          if (wifi_fpm_do_sleep(ENERGYLEAF_SLEEP_SECONDS * 1000 * 1000) !=
+              0 /*ESP_OK*/) {
+              // if sleep failes it breaks the loop.
+              AddLog(LOG_LEVEL_DEBUG,
+                     PSTR("ENERGYLEAF_SENSOR: No Sleep possible."));
+              ESP.wdtFeed();
+              yield();
+              break;
+          }
+          delay((ENERGYLEAF_SLEEP_SECONDS * 1000) + 1);
+          ESP.wdtFeed();
+          yield();
+      }
+      wifi_fpm_close();
+      wifi_set_opmode(STATION_MODE);
+      wifi_station_connect();
+      WifiEnable();
+      WifiConnect();
+  }
+
+  ESP.wdtFeed();
+  yield();
+
+  if (energyleaf.lock) {
+      energyleaf.lock = false;
+  }
+}
 
 //based on SML_Immediate_MQTT
 //example: 1,77070100010800ff@1000,Consumption (Total),kWh,ENERGYLEAF_KWH,4
@@ -4617,77 +4678,19 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
         }
         //jname = ENERGYLEAF_KWH
         ++cp;
-        if(strcmp(jname,energyleaf.identifier) == 0) {
+        if(strcmp(jname,energyleaf.identifier) == 0 || strcmp(jname,energyleaf.identifier_S1) == 0){
           uint8_t dp = atoi(cp);
           char output[20];
           dtostrf(sml_globs.meter_vars[index],sizeof(output) - 1,dp,output);
           if(print) {
-            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE [%s]"),output);
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE (maybe splitted value) [%s]"),output);
           } else {
             #ifndef ENERGYLEAF_TEST_INSTANCE
-            energyleaf_mem.value = doubleToFloat(sml_globs.meter_vars[index]);
-            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND [%s]"),output);
+            energyleaf_mem.value += doubleToFloat(sml_globs.meter_vars[index]);
+            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND/ADD [%s]"),output);
             #endif
             ESP.wdtFeed();
             yield();
-            if(energyleaf.smlUpdate && energyleafSendData() == ENERGYLEAF_ERROR::RET) {
-              if(energyleaf.retCnt >= ENERGYLEAF_CNT_MAX){
-                energyleaf.retCnt = 0;
-              } else { 
-                ++energyleaf.retCnt;
-                energyleaf.smlUpdate = false;
-                energyleaf.lock = false;
-                return;
-              }
-            } else {
-              if(!energyleaf.smlUpdate) {
-                energyleaf.lock = false;
-                return;
-              } else {
-                energyleaf.retCnt = 0;
-              }
-            }
-
-            delay(500);
-
-            Serial.flush();
-            energyleaf.smlUpdate = false;
-
-            if(energyleaf.sleep) {
-              //WiFi.mode(WIFI_OFF);
-              extern os_timer_t *timer_list; 
-              for(size_t i = 0; i <= ENERGYLEAF_SLEEP_ITERATIONS; ++i) {
-                WifiDisable();
-                wifi_station_disconnect();
-                wifi_set_opmode(NULL_MODE);
-                timer_list = nullptr;
-                wifi_fpm_set_sleep_type(LIGHT_SLEEP_T); 
-                wifi_fpm_open(); 
-                wifi_fpm_set_wakeup_cb(wakeupCallback); 
-                  if(wifi_fpm_do_sleep(ENERGYLEAF_SLEEP_SECONDS * 1000 * 1000) != 0/*ESP_OK*/) {
-                  //if sleep failes it breaks the loop.
-                  AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_SENSOR: No Sleep possible."));
-                  ESP.wdtFeed();
-                  yield();
-                  break;
-                }
-                delay((ENERGYLEAF_SLEEP_SECONDS * 1000) + 1);
-                ESP.wdtFeed();
-                yield();
-              }
-              wifi_fpm_close();
-              wifi_set_opmode(STATION_MODE);
-              wifi_station_connect();
-              WifiEnable();
-              WifiConnect();
-            }
-
-            ESP.wdtFeed();
-            yield();
-
-            if(energyleaf.lock) {
-              energyleaf.lock = false;
-            }
           }
         }
       }

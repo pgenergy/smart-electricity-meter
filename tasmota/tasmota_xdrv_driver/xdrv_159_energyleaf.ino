@@ -10,6 +10,10 @@
 #define ENERGYLEAF_KEYWORD "ENERGYLEAF_KWH"
 #endif
 
+#ifndef ENERGYLEAF_KEYWORD_SPLIT
+#define ENERGYLEAF_KEYWORD_SPLIT "ENERGYLEAF_KWH_1"
+#endif
+
 #ifndef ENERGYLEAF_DRIVER_AUTO_RUN
 #define ENERGYLEAF_DRIVER_AUTO_RUN true
 #endif
@@ -154,6 +158,7 @@ struct ENERGYLEAF_STATE {
     const SensorType type = SensorType_DIGITAL_ELECTRICITY;  
     //Identifier for the sml interface
     char identifier[20] = ENERGYLEAF_KEYWORD;
+    char identifier_S1[22] = ENERGYLEAF_KEYWORD_SPLIT;
     //Base dddress of all endpoints
     const char host[sizeof(ENERGYLEAF_ENDPOINT_HOST)] = ENERGYLEAF_ENDPOINT_HOST;
     //Port of the base address (default is 443)
@@ -167,6 +172,7 @@ struct ENERGYLEAF_STATE {
     //Identifies the counter for the auto reset of retries.
     uint8_t counterAutoResetRetry = ENERGYLEAF_RETRY_AUTO_RESET;
     uint8_t retCnt = 0;
+    bool dataRdy = false;
 } energyleaf;
 
 struct ENERGYLEAF_MEM {
