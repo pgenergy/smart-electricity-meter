@@ -27,9 +27,9 @@
 #endif
 
 //Enable following if the sensor should send each time to test, 0.1 kWh.
-#ifndef ENERGYLEAF_TEST_INSTANCE
+/*#ifndef ENERGYLEAF_TEST_INSTANCE
 #define ENERGYLEAF_TEST_INSTANCE
-#endif
+#endif*/
 
 #ifndef ENERGYLEAF_TEST_INSTANCE_VALUE
 #define ENERGYLEAF_TEST_INSTANCE_VALUE 1.5f
