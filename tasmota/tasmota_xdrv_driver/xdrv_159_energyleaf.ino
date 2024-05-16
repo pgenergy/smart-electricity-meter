@@ -178,10 +178,6 @@ struct ENERGYLEAF_STATE {
     //Identifier for the sml interface
     char identifier[20] = ENERGYLEAF_KEYWORD;
     char identifier_S1[22] = ENERGYLEAF_KEYWORD_SPLIT;
-    //Base dddress of all endpoints
-    const char host[sizeof(ENERGYLEAF_ENDPOINT_HOST)] = ENERGYLEAF_ENDPOINT_HOST;
-    //Port of the base address (default is 443)
-    const uint16_t port = 443;   
     //Retry counter
     uint8_t retryCounter = 0;
     //Identifies if there was min. one sml update
