@@ -6,6 +6,25 @@
 #define ENERGYLEAF_ENDPOINT_HOST "admin.energyleaf.de"
 #endif
 
+#ifndef ENERGYLEAF_ENDPOINT_PORT
+#define ENERGYLEAF_ENDPOINT_PORT 443
+#endif
+
+//Note: do not add a / at the beginn of the path, as its added inside of the code
+#ifndef ENERGYLEAF_ENDPOINT_TOKEN
+#define ENERGYLEAF_ENDPOINT_TOKEN "api/v1/token"
+#endif
+
+//Note: do not add a / at the beginn of the path, as its added inside of the code
+#ifndef ENERGYLEAF_ENDPOINT_DATA
+#define ENERGYLEAF_ENDPOINT_DATA "api/v1/sensor_input"
+#endif
+
+//Note: do not add a / at the beginn of the path, as its added inside of the code
+#ifndef ENERGYLEAF_ENDPOINT_SCRIPT
+#define ENERGYLEAF_ENDPOINT_SCRIPT "api/v1/script_accepted"
+#endif
+
 #ifndef ENERGYLEAF_KEYWORD
 #define ENERGYLEAF_KEYWORD "ENERGYLEAF_KWH"
 #endif
@@ -334,7 +353,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                         AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE - NO CERT LOADED"));
                         return ENERGYLEAF_ERROR::ERROR;
                     }
-                    state = energyleafClient->connect(energyleaf.host,energyleaf.port);
+                    state = energyleafClient->connect(ENERGYLEAF_ENDPOINT_HOST,ENERGYLEAF_ENDPOINT_PORT);
                     if(!state) {
                         if(energyleafClient->connected()){
                             energyleafClient->stop(); 
@@ -345,9 +364,11 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
 
                     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: CONNECTED TO ENERGYLEAF SERIVCE"));
 
-                    energyleafClient->write_P(PSTR("POST /api/v1/sensor_input HTTP/1.1\r\n"));
+                    energyleafClient->write_P(PSTR("POST /"));
+                    energyleafClient->write(ENERGYLEAF_ENDPOINT_DATA);
+                    energyleafClient->write_P(PSTR(" HTTP/1.1\r\n"));
                     energyleafClient->write_P(PSTR("Host: "));
-                    energyleafClient->write(energyleaf.host);
+                    energyleafClient->write(ENERGYLEAF_ENDPOINT_HOST);
                     energyleafClient->write_P(PSTR("\r\n"));
                     energyleafClient->write_P(PSTR("Content-Type: application/x-protobuf\r\n"));
                     energyleafClient->write_P(PSTR("Content-Length: "));
@@ -569,7 +590,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                 //Send TokenRequest and process received header
                 {
                     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: [%d][%d]"),ESP.getFreeContStack(),ESP.getFreeHeap());
-                    state = energyleaf.certLoaded && energyleafClient->connect(energyleaf.host,energyleaf.port);
+                    state = energyleaf.certLoaded && energyleafClient->connect(ENERGYLEAF_ENDPOINT_HOST,ENERGYLEAF_ENDPOINT_PORT);
                     if(!state) {
                         if(energyleafClient->connected()){
                             energyleafClient->stop(); 
@@ -580,9 +601,11 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     
                     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: CONNECTED TO ENERGYLEAF SERIVCE"));
 
-                    energyleafClient->write_P(PSTR("POST /api/v1/token HTTP/1.1\r\n"));
+                    energyleafClient->write_P(PSTR("POST /"));
+                    energyleafClient->write_P(ENERGYLEAF_ENDPOINT_TOKEN);
+                    energyleafClient->write_P(PSTR(" HTTP/1.1\r\n"));
                     energyleafClient->write_P(PSTR("Host: "));
-                    energyleafClient->write(energyleaf.host);
+                    energyleafClient->write(ENERGYLEAF_ENDPOINT_HOST);
                     energyleafClient->write_P(PSTR("\r\n"));
                     energyleafClient->write_P(PSTR("Content-Type: application/x-protobuf\r\n"));
                     energyleafClient->write_P(PSTR("Content-Length: "));
@@ -826,9 +849,11 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         return ENERGYLEAF_ERROR::ERROR;
                     }
 
-                    energyleafClient->write_P(PSTR("POST /api/v1/script_accepted HTTP/1.1\r\n"));
+                    energyleafClient->write_P(PSTR("POST /"));
+                    energyleafClient->write(ENERGYLEAF_ENDPOINT_SCRIPT);
+                    energyleafClient->write_P(PSTR(" HTTP/1.1\r\n"));
                     energyleafClient->write_P(PSTR("Host: "));
-                    energyleafClient->write(energyleaf.host);
+                    energyleafClient->write(ENERGYLEAF_ENDPOINT_HOST);
                     energyleafClient->write_P(PSTR("\r\n"));
                     energyleafClient->write_P(PSTR("Content-Type: application/x-protobuf\r\n"));
                     energyleafClient->write_P(PSTR("Content-Length: "));
