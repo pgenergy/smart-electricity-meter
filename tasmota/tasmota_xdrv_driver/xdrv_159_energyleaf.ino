@@ -1048,29 +1048,6 @@ bool XDRV_159_cmd(void) {
             energyleaf.needScript = true;
             energyleaf.active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"FORCE SCRIPT\"}}"));
-        } else if(*cp == 'c') {
-            //CONFIG
-            if(energyleaf.running || energyleaf.debug) {
-                return ret;
-            }
-            ++cp;
-            if(*cp == 'k') {
-                //KEYWORD
-                cp += 2;
-                char keyword[20];
-                for(uint8_t i = 0; i < sizeof(keyword); ++i) {
-                    if(cp == NULL) {
-                        keyword[i] = 0;
-                        break;
-                    }
-                    keyword[i] = *cp++;
-                }
-                if(sizeof(keyword) <= sizeof(energyleaf.identifier)) {
-                    strncpy(energyleaf.identifier,keyword,sizeof(keyword));
-                    AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER: NEW KEYWORD [%s]"),energyleaf.identifier);
-                    ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"COFNIG - IDENTIFIER\"}}"));
-                }
-            }
         } else if(*cp == 'a') {
             //ADJUST / RESET
             energyleaf.retryCounter = 0;
