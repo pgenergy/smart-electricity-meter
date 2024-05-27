@@ -33,21 +33,20 @@
 #define ENERGYLEAF_KEYWORD_SPLIT "ENERGYLEAF_KWH_1"
 #endif
 
+#ifndef ENERGYLEAF_KEYWORD_VALUE_OUT
+#define ENERGYLEAF_KEYWORD_VALUE_OUT "ENERGYLEAF_OUT"
+#endif
+
+#ifndef ENERGYLEAF_KEYWORD_VALUE_CURRENT
+#define ENERGYLEAF_KEYWORD_VALUE_CURRENT "ENERGYLEAF_CURRENT"
+#endif
+
 #ifndef ENERGYLEAF_DRIVER_AUTO_RUN
 #define ENERGYLEAF_DRIVER_AUTO_RUN true
 #endif
 
 #ifndef ENERGYLEAF_DRIVER_AUTO_FULL_RUN
 #define ENERGYLEAF_DRIVER_AUTO_FULL_RUN true
-#endif
-
-//Enable following if the sensor should send each time to test, 0.1 kWh.
-/*#ifndef ENERGYLEAF_TEST_INSTANCE
-#define ENERGYLEAF_TEST_INSTANCE
-#endif*/
-
-#ifndef ENERGYLEAF_TEST_INSTANCE_VALUE
-#define ENERGYLEAF_TEST_INSTANCE_VALUE 1.5f
 #endif
 
 #ifndef ENERGYLEAF_RETRY_AUTO_RESET
@@ -170,10 +169,7 @@ struct ENERGYLEAF_STATE {
     //State if the script is needed to be loaded (forced load)
     bool needScript = false;   
     //The type of this sensor
-    const SensorType type = SensorType_DIGITAL_ELECTRICITY;  
-    //Identifier for the sml interface
-    char identifier[20] = ENERGYLEAF_KEYWORD;
-    char identifier_S1[22] = ENERGYLEAF_KEYWORD_SPLIT;
+    const energyleaf_SensorType type = energyleaf_SensorType::energyleaf_SensorType_DIGITAL_ELECTRICITY;  
     //Retry counter
     uint8_t retryCounter = 0;
     //Identifies if there was min. one sml update
@@ -187,8 +183,12 @@ struct ENERGYLEAF_STATE {
 } energyleaf;
 
 struct ENERGYLEAF_MEM {
-    float value = 0.f;
-    float last_value = 0.f;
+    // kWh total */
+    double value = 0.f;
+    // W currently */
+    double value_current = 0.f;
+    // kWh total out (e.g. pv) */
+    double value_out = 0.f;
 } energyleaf_mem;
 
 BearSSL::WiFiClientSecure_light *energyleafClient = nullptr;
@@ -250,12 +250,6 @@ ENERGYLEAF_ERROR energyleafSendData(void) {
         AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER: RETRY COUNTER LIMIT REACHED, CHECK FOR PROBLEMS AND RESTART SENSOR IF FIXED [COUNTER:%d]"),energyleaf.retryCounter);
         return ENERGYLEAF_ERROR::ERROR;
     }
-    #ifdef ENERGYLEAF_TEST_INSTANCE
-        if(energyleaf_mem.value == 0.f) {
-            energyleaf_mem.value = energyleaf_mem.last_value;
-        }
-        energyleaf_mem.value = energyleaf_mem.value + ENERGYLEAF_TEST_INSTANCE_VALUE;
-    #endif
     if(energyleaf_mem.value == 0.f) {
         char output[20];
         dtostrf(energyleaf_mem.value,sizeof(output) - 1,4,output);
@@ -312,10 +306,10 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
             uint16_t bodySize = 0;
             {
                 //Prepare SensorDataRequest
-                uint8_t bufferSensorDataRequest[SensorDataRequest_size];
+                uint8_t bufferSensorDataRequest[energyleaf_SensorDataRequest_size];
                 pb_ostream_t streamSensorDataRequestOut;
                 {
-                    SensorDataRequest sensorDataRequest = SensorDataRequest_init_default;
+                    energyleaf_SensorDataRequest sensorDataRequest = energyleaf_SensorDataRequest_init_default;
                     memcpy(sensorDataRequest.access_token, energyleaf.accessToken, sizeof(energyleaf.accessToken));
                     AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: USED TOKEN [%s]"),sensorDataRequest.access_token);
                     sensorDataRequest.type = energyleaf.type;
@@ -325,9 +319,19 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                     dtostrf(energyleaf_mem.value,sizeof(output) - 1,4,output);
                     AddLog(LOG_LEVEL_NONE, PSTR("ENERGYLEAF_DRIVER: Sending value [%s]"),output);
 
+                    if(energyleaf_mem.value_current != 0.f) {
+                        sensorDataRequest.value_current = energyleaf_mem.value_current;
+                        sensorDataRequest.has_value_current = true;
+                    }
+
+                    if(energyleaf_mem.value_out != 0.f) {
+                        sensorDataRequest.value_out = energyleaf_mem.value_out;
+                        sensorDataRequest.has_value_out = true;
+                    }
+
                     streamSensorDataRequestOut = pb_ostream_from_buffer(bufferSensorDataRequest, sizeof(bufferSensorDataRequest));
 
-                    state = pb_encode(&streamSensorDataRequestOut,SensorDataRequest_fields, &sensorDataRequest);
+                    state = pb_encode(&streamSensorDataRequestOut,energyleaf_SensorDataRequest_fields, &sensorDataRequest);
                 }
 
                 if(!state) {
@@ -434,9 +438,9 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
 
             {
                 //Process received body and generate SensorDataResponse from it
-                SensorDataResponse sensorDataResponse = SensorDataResponse_init_default;
+                energyleaf_SensorDataResponse sensorDataResponse = energyleaf_SensorDataResponse_init_default;
                 {
-                    uint8_t bufferSensorDataResponse[SensorDataResponse_size];
+                    uint8_t bufferSensorDataResponse[energyleaf_SensorDataResponse_size];
                     int currentSize = 0;
                     {
                         if(chunked) {
@@ -460,7 +464,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                                     break;
                                 }
 
-                                if(currentSize + l <= SensorDataResponse_size) {
+                                if(currentSize + l <= energyleaf_SensorDataResponse_size) {
                                     memcpy(bufferSensorDataResponse + currentSize, chunkData, l);
                                     currentSize += l;
                                 } else {
@@ -493,7 +497,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
 
                     {
                         pb_istream_t streamSensorDataResponseIn = pb_istream_from_buffer(bufferSensorDataResponse,currentSize);
-                        state = pb_decode(&streamSensorDataResponseIn,SensorDataResponse_fields, &sensorDataResponse);
+                        state = pb_decode(&streamSensorDataResponseIn,energyleaf_SensorDataResponse_fields, &sensorDataResponse);
                     }
 
                     if(!state) {
@@ -551,10 +555,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
             uint16_t bodySize = 0;
             {  
                 //Prepare TokenRequest
-                uint8_t bufferTokenRequest[TokenRequest_size];
+                uint8_t bufferTokenRequest[energyleaf_TokenRequest_size];
                 pb_ostream_t streamTokenRequestOut;
                 {
-                    TokenRequest tokenRequest = TokenRequest_init_default;
+                    energyleaf_TokenRequest tokenRequest = energyleaf_TokenRequest_init_default;
                     //collect the MAC of this sensor
                     memcpy(tokenRequest.client_id, WiFi.macAddress().c_str(), sizeof(tokenRequest.client_id));
                     AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: USED MAC [%s]"),tokenRequest.client_id);
@@ -568,7 +572,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: NEED SCRIPT [%s]"),tokenRequest.need_script ? "true" : "false");
 
                 
-                    state = pb_encode(&streamTokenRequestOut,TokenRequest_fields, &tokenRequest);
+                    state = pb_encode(&streamTokenRequestOut,energyleaf_TokenRequest_fields, &tokenRequest);
                 }
 
                 if(!state) {
@@ -669,14 +673,14 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                 }
             }
 
-            uint8_t bufferScriptAcceptedRequest[ScriptAcceptedRequest_size];
+            uint8_t bufferScriptAcceptedRequest[energyleaf_ScriptAcceptedRequest_size];
             pb_ostream_t streamScriptAcceptedRequestOut;
 
             {
                 //Process received body and generate TokenResponse from it
-                TokenResponse tokenResponse = TokenResponse_init_default;
+                energyleaf_TokenResponse tokenResponse = energyleaf_TokenResponse_init_default;
                 {
-                    uint8_t bufferTokenResponse[TokenResponse_size];
+                    uint8_t bufferTokenResponse[energyleaf_TokenResponse_size];
                     int currentSize = 0;
                     {
                         if(chunked) {
@@ -700,7 +704,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                                     break;
                                 }
 
-                                if(currentSize + l <= TokenResponse_size) {
+                                if(currentSize + l <= energyleaf_TokenResponse_size) {
                                     memcpy(bufferTokenResponse + currentSize, chunkData, l);
                                     currentSize += l;
                                 } else {
@@ -733,7 +737,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 
                     {
                         pb_istream_t streamTokenResponseIn = pb_istream_from_buffer(bufferTokenResponse,currentSize);
-                        state = pb_decode(&streamTokenResponseIn,TokenResponse_fields, &tokenResponse);
+                        state = pb_decode(&streamTokenResponseIn,energyleaf_TokenResponse_fields, &tokenResponse);
                     }
 
                     if(!state) {
@@ -769,10 +773,6 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     
                     strcpy(energyleaf.accessToken, tokenResponse.access_token);
                     energyleaf.expiresIn = tokenResponse.expires_in;
-
-                    if(tokenResponse.has_current_value) {
-                        energyleaf_mem.last_value = tokenResponse.current_value;
-                    }
 
                     if(tokenResponse.has_script) {
                         state = sizeof(tokenResponse.script) < glob_script_mem.script_size;
@@ -812,7 +812,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 
                 //Prepare ScriptAcceptedRequest
                 {
-                    ScriptAcceptedRequest scriptAcceptedRequest = ScriptAcceptedRequest_init_default;
+                    energyleaf_ScriptAcceptedRequest scriptAcceptedRequest = energyleaf_ScriptAcceptedRequest_init_default;
 
                     memcpy(scriptAcceptedRequest.access_token, energyleaf.accessToken, sizeof(energyleaf.accessToken));
 
@@ -820,7 +820,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 
                     AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: Creating SAR-Package"));
                 
-                    state = pb_encode(&streamScriptAcceptedRequestOut,ScriptAcceptedRequest_fields, &scriptAcceptedRequest);
+                    state = pb_encode(&streamScriptAcceptedRequestOut,energyleaf_ScriptAcceptedRequest_fields, &scriptAcceptedRequest);
                 }
 
                 if(!state) {
@@ -1014,7 +1014,7 @@ bool XDRV_159_cmd(void) {
             }
         } else if(*cp == 'v') {
             //VERIFY / TEST
-            energyleaf_mem.value = energyleaf_mem.last_value + 0.15;
+            energyleaf_mem.value += 0.15;
             energyleafSendData();
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"VERIFY / TEST\"}}"));
         } else if(*cp == 'p') {
@@ -1053,7 +1053,6 @@ bool XDRV_159_cmd(void) {
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: token [%s]"),energyleaf.accessToken);
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: expires in [%d] seconds"),energyleaf.expiresIn);
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: active [%s]"),energyleaf.active ? "true" : "false");
-            AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: identifier [%s]"),energyleaf.identifier);
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER: debug [%s]"),energyleaf.debug   ? "true" : "false");
             ResponseTime_P(PSTR(",\"ENERGYLEAF\":{\"CMD\":\"PRINTING INFORMATION OF DRIVER\"}}"));
         }
