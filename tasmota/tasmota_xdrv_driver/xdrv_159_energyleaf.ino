@@ -322,11 +322,15 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                     if(energyleaf_mem.value_current != 0.f) {
                         sensorDataRequest.value_current = energyleaf_mem.value_current;
                         sensorDataRequest.has_value_current = true;
+                    } else {
+                        sensorDataRequest.has_value_current = false;
                     }
 
                     if(energyleaf_mem.value_out != 0.f) {
                         sensorDataRequest.value_out = energyleaf_mem.value_out;
                         sensorDataRequest.has_value_out = true;
+                    } else {
+                        sensorDataRequest.has_value_out = false;
                     }
 
                     streamSensorDataRequestOut = pb_ostream_from_buffer(bufferSensorDataRequest, sizeof(bufferSensorDataRequest));
