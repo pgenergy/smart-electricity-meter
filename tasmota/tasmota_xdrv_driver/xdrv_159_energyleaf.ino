@@ -679,6 +679,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 
             uint8_t bufferScriptAcceptedRequest[energyleaf_ScriptAcceptedRequest_size];
             pb_ostream_t streamScriptAcceptedRequestOut;
+            bool res = false;
 
             {
                 //Process received body and generate TokenResponse from it
@@ -800,6 +801,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 
                         bitWrite(Settings->rule_enabled, 0, 1);
                         energyleaf.needScript = false;
+                        res = true;
                     } else {
                         if(energyleaf.needScript) {
                             AddLog(LOG_LEVEL_ERROR,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - SCRIPT REQUEST BUT NOT RECEIVED "));
@@ -860,6 +862,11 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                 }
             }         
             energyleafClient->stop(); 
+
+            if(res) {
+                ESP_Restart();
+            }
+
             return ENERGYLEAF_ERROR::NO_ERROR;
         } else {
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: NO WIFI TO CREATE A REQUEST - AUTO-RETRY IN SOME TIME"));
