@@ -12,12 +12,11 @@ The driver collects the data based on two keywords that can be used in the scrip
 ## Available Commands
 
 <ol>
-	<li><code>driver159 rt</code> - Start the driver in an test mode</li>
 	<li><code>driver159 rf</code> - Start the driver (full)</li>
 	<li><code>driver159 rs</code> - Start the driver (half, without sending data directly)</li>
 	<li><code>driver159 s</code> - Stop the driver</li>
 	<li><code>driver159 e(0/1)</code> - Changing the sleep mode (currently unsupported)</li>
-	<li><code>driver159 v</code> - In an test mode, send test data</li>
+	<li><code>driver159 v</code> - In the half mode, send test data</li>
 	<li><code>driver159 ps</code> - Print in console currently data stored in the sensor (software)</li>
     	<li><code>driver159 pd</code> - Print in console currently data stored in the driver</li>
     	<li><code>driver159 m</code> - Direct send currently data</li>
