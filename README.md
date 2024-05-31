@@ -19,11 +19,11 @@ The driver collects the data based on two keywords that can be used in the scrip
 	<li><code>driver159 e(0/1)</code> - Changing the sleep mode (currently unsupported)</li>
 	<li><code>driver159 v</code> - In an test mode, send test data</li>
 	<li><code>driver159 ps</code> - Print in console currently data stored in the sensor (software)</li>
-    <li><code>driver159 pd</code> - Print in console currently data stored in the driver</li>
-    <li><code>driver159 m</code> - Direct send currently data</li>
-    <li><code>driver159 f</code> - Force script update</li>
-    <li><code>driver159 a</code> - Reset the counter for retries</li>
-    <li><code>driver159 i</code> - Print some informations</li>
+    	<li><code>driver159 pd</code> - Print in console currently data stored in the driver</li>
+    	<li><code>driver159 m</code> - Direct send currently data</li>
+    	<li><code>driver159 f</code> - Force script update</li>
+    	<li><code>driver159 a</code> - Reset the counter for retries</li>
+    	<li><code>driver159 i</code> - Print some informations</li>
 </ol>
 
 ## Available Build-Defines
@@ -44,7 +44,7 @@ The driver collects the data based on two keywords that can be used in the scrip
     	<li><code>ENERGYLEAF_SLEEP</code> - Using raw sleep (default=false)</li>
     	<li><code>ENERGYLEAF_SLEEP_SECONDS</code> - Seconds per Sleep- or Idle-iteration</li>
     	<li><code>ENERGYLEAF_SLEEP_ITERATIONS</code> - Sleep- or Idle-Iteration</li>
-    	<li><code>ENERGYLEAF_CNT_MAX</code> - Max. Retires to get a good sensor reading</li>
+    	<li><code>ENERGYLEAF_CNT_MAX</code> - Max. Retries to get a good sensor reading</li>
 </ol>
 
 
