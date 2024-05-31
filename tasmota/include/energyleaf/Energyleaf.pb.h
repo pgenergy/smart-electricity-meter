@@ -47,6 +47,8 @@ typedef struct _energyleaf_SensorDataRequest {
     double value_current; /* W currently */
     bool has_value_out;
     double value_out; /* kWh total out (e.g. pv) */
+    bool has_timestamp;
+    uint64_t timestamp;
 } energyleaf_SensorDataRequest;
 
 typedef struct _energyleaf_SensorDataResponse {
@@ -87,13 +89,13 @@ extern "C" {
 /* Initializer values for message structs */
 #define energyleaf_TokenRequest_init_default     {"", _energyleaf_SensorType_MIN, false, 0}
 #define energyleaf_TokenResponse_init_default    {false, "", false, 0, 0, false, "", false, "", false, 0}
-#define energyleaf_SensorDataRequest_init_default {"", _energyleaf_SensorType_MIN, 0, false, 0, false, 0}
+#define energyleaf_SensorDataRequest_init_default {"", _energyleaf_SensorType_MIN, 0, false, 0, false, 0, false, 0}
 #define energyleaf_SensorDataResponse_init_default {0, false, ""}
 #define energyleaf_ScriptAcceptedRequest_init_default {""}
 #define energyleaf_ScriptAcceptedResponse_init_default {0, false, ""}
 #define energyleaf_TokenRequest_init_zero        {"", _energyleaf_SensorType_MIN, false, 0}
 #define energyleaf_TokenResponse_init_zero       {false, "", false, 0, 0, false, "", false, "", false, 0}
-#define energyleaf_SensorDataRequest_init_zero   {"", _energyleaf_SensorType_MIN, 0, false, 0, false, 0}
+#define energyleaf_SensorDataRequest_init_zero   {"", _energyleaf_SensorType_MIN, 0, false, 0, false, 0, false, 0}
 #define energyleaf_SensorDataResponse_init_zero  {0, false, ""}
 #define energyleaf_ScriptAcceptedRequest_init_zero {""}
 #define energyleaf_ScriptAcceptedResponse_init_zero {0, false, ""}
@@ -113,6 +115,7 @@ extern "C" {
 #define energyleaf_SensorDataRequest_value_tag   3
 #define energyleaf_SensorDataRequest_value_current_tag 4
 #define energyleaf_SensorDataRequest_value_out_tag 5
+#define energyleaf_SensorDataRequest_timestamp_tag 6
 #define energyleaf_SensorDataResponse_status_tag 1
 #define energyleaf_SensorDataResponse_status_message_tag 2
 #define energyleaf_ScriptAcceptedRequest_access_token_tag 1
@@ -142,7 +145,8 @@ X(a, STATIC,   SINGULAR, STRING,   access_token,      1) \
 X(a, STATIC,   SINGULAR, UENUM,    type,              2) \
 X(a, STATIC,   SINGULAR, DOUBLE,   value,             3) \
 X(a, STATIC,   OPTIONAL, DOUBLE,   value_current,     4) \
-X(a, STATIC,   OPTIONAL, DOUBLE,   value_out,         5)
+X(a, STATIC,   OPTIONAL, DOUBLE,   value_out,         5) \
+X(a, STATIC,   OPTIONAL, UINT64,   timestamp,         6)
 #define energyleaf_SensorDataRequest_CALLBACK NULL
 #define energyleaf_SensorDataRequest_DEFAULT NULL
 
@@ -182,7 +186,7 @@ extern const pb_msgdesc_t energyleaf_ScriptAcceptedResponse_msg;
 #define ENERGYLEAF_ENERGYLEAF_PB_H_MAX_SIZE      energyleaf_TokenResponse_size
 #define energyleaf_ScriptAcceptedRequest_size    46
 #define energyleaf_ScriptAcceptedResponse_size   263
-#define energyleaf_SensorDataRequest_size        75
+#define energyleaf_SensorDataRequest_size        86
 #define energyleaf_SensorDataResponse_size       263
 #define energyleaf_TokenRequest_size             134
 #define energyleaf_TokenResponse_size            989
