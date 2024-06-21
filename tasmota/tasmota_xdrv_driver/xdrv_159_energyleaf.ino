@@ -2,6 +2,15 @@
 #ifdef USE_ENERGYLEAF
 #define XDRV_159 159
 
+#ifndef ENERGYLEAF_USE_LED
+#define ENERGYLEAF_USE_LED true
+#endif
+
+//Note: Only set and use the led if nothing else the led is already used!
+#ifndef ENERGYLEAF_LED_PIN
+#define ENERGYLEAF_LED_PIN 2
+#endif
+
 #ifndef ENERGYLEAF_ENDPOINT_HOST
 #define ENERGYLEAF_ENDPOINT_HOST "admin.energyleaf.de"
 #endif
@@ -75,7 +84,7 @@
 #include <WiFiClientSecureLightBearSSL.h>
 #include <pb_decode.h>
 #include <pb_encode.h>
-#include <include/energyleaf/Energyleaf.pb.h>
+#include "Energyleaf.pb.h"
 #include <include/energyleaf/Energyleaf.error.h>
 
 const unsigned char TA0_DN[] PROGMEM = {
@@ -293,13 +302,15 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
         if(WiFi.status() == WL_CONNECTED) {
             ESP.wdtFeed();
             yield();
-            digitalWrite(2,HIGH);
-            delay(100);
-            digitalWrite(2,LOW);
-            delay(100);
-            digitalWrite(2,HIGH);
-            delay(100);
-            digitalWrite(2,LOW);
+            #if ENERGYLEAF_USE_LED == true
+            digitalWrite(ENERGYLEAF_LED_PIN,HIGH);
+            delay(500);
+            digitalWrite(ENERGYLEAF_LED_PIN,LOW);
+            delay(500);
+            digitalWrite(ENERGYLEAF_LED_PIN,HIGH);
+            delay(500);
+            digitalWrite(ENERGYLEAF_LED_PIN,LOW);
+            #endif
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: WIFI IS AVAILABLE"));
             bool state = false;
             bool chunked = false;
@@ -870,32 +881,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
             return ENERGYLEAF_ERROR::NO_ERROR;
         } else {
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: NO WIFI TO CREATE A REQUEST - AUTO-RETRY IN SOME TIME"));
-            digitalWrite(2,HIGH);
-            delay(100);
-            digitalWrite(2,LOW);
-            delay(100);
-            digitalWrite(2,HIGH);
-            delay(100);
-            digitalWrite(2,LOW);
-            delay(100);
-            digitalWrite(2,HIGH);
-            delay(100);
-            digitalWrite(2,LOW);
             return ENERGYLEAF_ERROR::ERROR;
         }
     } else {
         AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: NO CLIENT IS AVAILABLE - RESTART SENSOR OR CONTACT SUPPORT"));
-        digitalWrite(2,HIGH);
-        delay(100);
-        digitalWrite(2,LOW);
-        delay(100);
-        digitalWrite(2,HIGH);
-        delay(100);
-        digitalWrite(2,LOW);
-        delay(100);
-        digitalWrite(2,HIGH);
-        delay(100);
-        digitalWrite(2,LOW);
         return ENERGYLEAF_ERROR::ERROR; 
     }
 }
@@ -958,9 +947,11 @@ void energyleafEverySecond(void) {
                 }
             }
             energyleaf.lock = true;
-            digitalWrite(2,HIGH);
+            #if ENERGYLEAF_USE_LED == true
+            digitalWrite(ENERGYLEAF_LED_PIN,HIGH);
             delay(500);
-            digitalWrite(2,LOW);
+            digitalWrite(ENERGYLEAF_LED_PIN,LOW);
+            #endif
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: SML-Update [%s] - REQUEST SENDING"),energyleaf.smlUpdate ? "true" : "false");
             XsnsXdrvCall(FUNC_ENERGYLEAF_SEND);
             if(energyleaf.lock) energyleaf.lock = false;
