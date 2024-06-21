@@ -75,7 +75,7 @@
 #include <WiFiClientSecureLightBearSSL.h>
 #include <pb_decode.h>
 #include <pb_encode.h>
-#include <include/energyleaf/Energyleaf.pb.h>
+#include "Energyleaf.pb.h"
 #include <include/energyleaf/Energyleaf.error.h>
 
 const unsigned char TA0_DN[] PROGMEM = {
