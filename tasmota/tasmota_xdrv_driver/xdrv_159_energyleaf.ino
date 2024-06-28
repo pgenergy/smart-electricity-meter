@@ -317,10 +317,10 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
             uint16_t bodySize = 0;
             {
                 //Prepare SensorDataRequest
-                uint8_t bufferSensorDataRequest[energyleaf_SensorDataRequest_size];
+                uint8_t bufferSensorDataRequest[energyleaf_SensorDataRequestV2_size];
                 pb_ostream_t streamSensorDataRequestOut;
                 {
-                    energyleaf_SensorDataRequest sensorDataRequest = energyleaf_SensorDataRequest_init_default;
+                    energyleaf_SensorDataRequestV2 sensorDataRequest = energyleaf_SensorDataRequestV2_init_default;
                     memcpy(sensorDataRequest.access_token, energyleaf.accessToken, sizeof(energyleaf.accessToken));
                     AddLog(LOG_LEVEL_DEBUG, PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: USED TOKEN [%s]"),sensorDataRequest.access_token);
                     sensorDataRequest.type = energyleaf.type;
@@ -346,7 +346,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
 
                     streamSensorDataRequestOut = pb_ostream_from_buffer(bufferSensorDataRequest, sizeof(bufferSensorDataRequest));
 
-                    state = pb_encode(&streamSensorDataRequestOut,energyleaf_SensorDataRequest_fields, &sensorDataRequest);
+                    state = pb_encode(&streamSensorDataRequestOut,energyleaf_SensorDataRequestV2_fields, &sensorDataRequest);
                 }
 
                 if(!state) {
