@@ -354,7 +354,9 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                     state = pb_encode(streamSensorDataRequestOut,energyleaf_SensorDataRequestV2_fields, sensorDataRequest);
                     byteswritten = streamSensorDataRequestOut->bytes_written;
                     delete streamSensorDataRequestOut;
+                    streamSensorDataRequestOut = nullptr;
                     delete sensorDataRequest;
+                    sensorDataRequest = nullptr;
                 }
 
                 if(!state) {
@@ -396,6 +398,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                 }
 
                 delete[] bufferSensorDataRequest;
+                bufferSensorDataRequest = nullptr;
 
                 if(!state) {
                     energyleafClient->stop(); 
@@ -461,9 +464,11 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                         pb_istream_t *streamSensorDataResponseIn = new pb_istream_t(pb_istream_from_buffer(bufferSensorDataResponse,currentSize));
                         state = pb_decode(streamSensorDataResponseIn,energyleaf_SensorDataResponse_fields, sensorDataResponse);
                         delete streamSensorDataResponseIn;
+                        streamSensorDataResponseIn = nullptr;
                     }
 
                     delete[] bufferSensorDataResponse;
+                    bufferSensorDataResponse = nullptr;
 
                     if(!state) {
                         energyleafHttpsClient->end(); 
@@ -537,7 +542,9 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     state = pb_encode(streamTokenRequestOut,energyleaf_TokenRequest_fields, tokenRequest);
                     byteswritten = streamTokenRequestOut->bytes_written;
                     delete streamTokenRequestOut;
+                    streamTokenRequestOut = nullptr;
                     delete tokenRequest;
+                    tokenRequest = nullptr;
                 }
 
                 if(!state) {
@@ -579,6 +586,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         }
                     }
                     delete[] bufferTokenRequest;
+                    bufferTokenRequest = nullptr;
                 }
 
                 if(!state) {
@@ -648,6 +656,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         pb_istream_t *streamTokenResponseIn = new pb_istream_t(pb_istream_from_buffer(bufferTokenResponse,currentSize));
                         state = pb_decode(streamTokenResponseIn,energyleaf_TokenResponse_fields, tokenResponse);
                         delete streamTokenResponseIn;
+                        streamTokenResponseIn = nullptr;
                     }
 
                     if(!state) {
@@ -657,6 +666,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     }
 
                     delete[] bufferTokenResponse;
+                    bufferTokenResponse = nullptr;
                 }
 
                 ESP.wdtFeed();
@@ -725,8 +735,9 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         }
                     }
                 }
-                
+
                 delete tokenResponse;
+                tokenResponse = nullptr;
                 energyleafHttpsClient->end(); 
 
                 //Prepare ScriptAcceptedRequest
@@ -742,7 +753,9 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     state = pb_encode(streamScriptAcceptedRequestOut,energyleaf_ScriptAcceptedRequest_fields, scriptAcceptedRequest);
                     byteswritten = streamScriptAcceptedRequestOut->bytes_written;
                     delete streamScriptAcceptedRequestOut;
+                    streamScriptAcceptedRequestOut = nullptr;
                     delete scriptAcceptedRequest;
+                    scriptAcceptedRequest = nullptr;
                 }
 
                 if(!state) {
@@ -781,6 +794,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
             }         
             energyleafHttpsClient->end(); 
             delete[] bufferScriptAcceptedRequest;
+            bufferScriptAcceptedRequest = nullptr;
 
             if(res) {
                 AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: FOLLOWING RESTART IS NORMAL!"));
