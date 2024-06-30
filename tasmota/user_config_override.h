@@ -125,9 +125,9 @@ Examples :
 #endif
 #ifdef SERIAL_LOG_LEVEL
 #undef SERIAL_LOG_LEVEL
-#define SERIAL_LOG_LEVEL       LOG_LEVEL_NONE
+#define SERIAL_LOG_LEVEL       LOG_LEVEL_DEBUG_MORE
 #else
-#define SERIAL_LOG_LEVEL       LOG_LEVEL_NONE
+#define SERIAL_LOG_LEVEL       LOG_LEVEL_DEBUG_MORE
 #endif
 
 #ifdef WEB_LOG_LEVEL
