@@ -132,9 +132,9 @@ Examples :
 
 #ifdef WEB_LOG_LEVEL
 #undef WEB_LOG_LEVEL
-#define WEB_LOG_LEVEL       LOG_LEVEL_NONE
+#define WEB_LOG_LEVEL       LOG_LEVEL_INFO
 #else
-#define WEB_LOG_LEVEL       LOG_LEVEL_NONE
+#define WEB_LOG_LEVEL       LOG_LEVEL_INFO
 #endif
 
 //Uncomment and modify values to use Syslog

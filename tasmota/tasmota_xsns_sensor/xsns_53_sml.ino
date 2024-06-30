@@ -1850,7 +1850,7 @@ void SML_Decode(uint8_t index) {
         double fac = CharToDouble((char*)mp);
         sml_globs.meter_vars[vindex] /= fac;
         SML_Immediate_MQTT((const char*)mp, vindex, mindex);
-        energyleaf.smlUpdate = true;
+        energyleaf->smlUpdate = true;
         sml_globs.dvalid[vindex] = 1;
         // get sfac
       } else if (*mp == 'd') {
@@ -1892,7 +1892,7 @@ void SML_Decode(uint8_t index) {
               double fac = CharToDouble((char*)mp);
               sml_globs.meter_vars[vindex] /= fac;
               SML_Immediate_MQTT((const char*)mp, vindex, mindex);
-              energyleaf.smlUpdate = true;
+              energyleaf->smlUpdate = true;
             }
           }
           //sml_globs.dvalid[vindex] = 1;
@@ -2445,7 +2445,7 @@ void SML_Decode(uint8_t index) {
           }
           sml_globs.meter_vars[vindex] /= fac;
           SML_Immediate_MQTT((const char*)mp, vindex, mindex);
-          energyleaf.smlUpdate = true;
+          energyleaf->smlUpdate = true;
         }
       }
       //AddLog(LOG_LEVEL_INFO, PSTR("set valid in line %d"), vindex);
@@ -4573,7 +4573,7 @@ void SML_Energyleaf(bool print) {
 
   if (!sml_globs.meters_used) return;
   AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("ENERGYLEAF_SENSOR: DATA %s"),mp);
-  energyleaf.dataRdy = false;
+  energyleaf->dataRdy = false;
   while(mp != NULL) {
     if(*mp == 0) break;
 
@@ -4590,31 +4590,31 @@ void SML_Energyleaf(bool print) {
     if (mp) ++mp;
   }
 
-  if (energyleaf.smlUpdate && energyleafSendData() == ENERGYLEAF_ERROR::RET) {
+  if (energyleaf->smlUpdate && energyleafSendData() == ENERGYLEAF_ERROR::RET) {
       //Force to recalculate the values the next try.
-      energyleaf_mem.value = 0.f;
-      if (energyleaf.retCnt >= ENERGYLEAF_CNT_MAX) {
-          energyleaf.retCnt = 0;
+      energyleaf_mem->value = 0.f;
+      if (energyleaf->retCnt >= ENERGYLEAF_CNT_MAX) {
+          energyleaf->retCnt = 0;
       } else {
-          ++energyleaf.retCnt;
-          energyleaf.smlUpdate = false;
-          energyleaf.lock = false;
+          ++energyleaf->retCnt;
+          energyleaf->smlUpdate = false;
+          energyleaf->lock = false;
           return;
       }
   } else {
       //Force to recalculate the values the next try.
-      energyleaf_mem.value = 0.f;
-      if (!energyleaf.smlUpdate) {
-          energyleaf.lock = false;
+      energyleaf_mem->value = 0.f;
+      if (!energyleaf->smlUpdate) {
+          energyleaf->lock = false;
           return;
       } else {
-          energyleaf.retCnt = 0;
+          energyleaf->retCnt = 0;
       }
   }
 
-  energyleaf.smlUpdate = false;
+  energyleaf->smlUpdate = false;
 
-  if (energyleaf.sleep) {
+  if (energyleaf->sleep) {
       delay(500);
       Serial.flush();
       extern os_timer_t *timer_list;
@@ -4649,8 +4649,8 @@ void SML_Energyleaf(bool print) {
   ESP.wdtFeed();
   yield();
 
-  if (energyleaf.lock) {
-      energyleaf.lock = false;
+  if (energyleaf->lock) {
+      energyleaf->lock = false;
   }
 }
 
@@ -4685,15 +4685,15 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
           if(print) {
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE (maybe splitted value) [%s]"),output);
           } else {
-            energyleaf_mem.value += sml_globs.meter_vars[index];
+            energyleaf_mem->value += sml_globs.meter_vars[index];
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: CURRENT VALUE TO SEND/ADD [%s]"),output);
             ESP.wdtFeed();
             yield();
           }
         } else if (strcmp(jname,ENERGYLEAF_KEYWORD_VALUE_OUT) == 0) {
-          energyleaf_mem.value_current = sml_globs.meter_vars[index];
+          energyleaf_mem->value_current = sml_globs.meter_vars[index];
         } else if (strcmp(jname,ENERGYLEAF_KEYWORD_VALUE_CURRENT) == 0) {
-          energyleaf_mem.value_out = sml_globs.meter_vars[index];
+          energyleaf_mem->value_out = sml_globs.meter_vars[index];
         }
       }
     }
@@ -4774,7 +4774,7 @@ bool Xsns53(uint32_t function) {
         break;
       case FUNC_ENERGYLEAF_SEND:
         AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: GOT COMMAND TO SEND DATA! %s"), sml_globs.ready ? "true" : "false");
-        if (sml_globs.ready && energyleaf.smlUpdate && (energyleaf.running || energyleaf.debug)) {
+        if (sml_globs.ready && energyleaf->smlUpdate && (energyleaf->running || energyleaf->debug)) {
           SML_Energyleaf(false);
         }
         break;
