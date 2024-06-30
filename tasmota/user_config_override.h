@@ -125,16 +125,16 @@ Examples :
 #endif
 #ifdef SERIAL_LOG_LEVEL
 #undef SERIAL_LOG_LEVEL
-#define SERIAL_LOG_LEVEL       LOG_LEVEL_DEBUG_MORE
+#define SERIAL_LOG_LEVEL       LOG_LEVEL_NONE
 #else
-#define SERIAL_LOG_LEVEL       LOG_LEVEL_DEBUG_MORE
+#define SERIAL_LOG_LEVEL       LOG_LEVEL_NONE
 #endif
 
 #ifdef WEB_LOG_LEVEL
 #undef WEB_LOG_LEVEL
-#define WEB_LOG_LEVEL       LOG_LEVEL_NONE
+#define WEB_LOG_LEVEL       LOG_LEVEL_INFO
 #else
-#define WEB_LOG_LEVEL       LOG_LEVEL_NONE
+#define WEB_LOG_LEVEL       LOG_LEVEL_INFO
 #endif
 
 //Uncomment and modify values to use Syslog
