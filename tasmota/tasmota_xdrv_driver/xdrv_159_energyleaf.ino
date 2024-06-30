@@ -372,7 +372,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                     state = energyleafHttpsClient->begin(*energyleafClient,ENERGYLEAF_ENDPOINT_HOST,ENERGYLEAF_ENDPOINT_PORT,ENERGYLEAF_ENDPOINT_DATA,true);
                     if(!state) {
                         energyleafHttpsClient->end(); 
-                        AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE %d"),energyleafClient->getLastError());
+                        AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE"));
                         return ENERGYLEAF_ERROR::ERROR;
                     }
 
@@ -401,7 +401,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                 bufferSensorDataRequest = nullptr;
 
                 if(!state) {
-                    energyleafClient->stop(); 
+                    energyleafHttpsClient->end();
                     AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - GOT WRONG CONTENT-TYPE FROM SERVICE"));
                     return ENERGYLEAF_ERROR::ERROR;
                 }
@@ -493,7 +493,9 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                         }
                         return ENERGYLEAF_ERROR::ERROR;
                     }
-                }        
+                }
+                delete sensorDataResponse;
+                sensorDataResponse = nullptr;        
             }
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: SUCCESSFUL - DATA WAS TRASMITTED TO THE SERVICE"));
             return ENERGYLEAF_ERROR::NO_ERROR;
