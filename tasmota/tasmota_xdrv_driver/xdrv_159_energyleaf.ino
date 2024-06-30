@@ -404,6 +404,9 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                 }
             }
 
+            ESP.wdtFeed();
+            yield();
+
             {
                 //Process received body and generate SensorDataResponse from it
                 energyleaf_SensorDataResponse *sensorDataResponse = new energyleaf_SensorDataResponse();
@@ -722,6 +725,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         }
                     }
                 }
+                
                 delete tokenResponse;
                 energyleafHttpsClient->end(); 
 
