@@ -252,7 +252,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                         bufferSensorDataRequest = nullptr;
                     }
 
-                    if(energyleafHttpsClient->connected() && httpCode >= 200 && httpCode <= 299) {
+                    if(energyleafHttpsClient->connected() && httpCode >= 200 && httpCode <= 299 && energyleafHttpsClient->header("Transfer-Encoding").equals("chunked")) {
                         AddLog(LOG_LEVEL_DEBUG,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: GOT A %d STATUS"),httpCode);
                     } else {
                         AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - GOT A %d STATUS"),httpCode);
@@ -497,7 +497,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         bufferTokenRequest = nullptr;
                     }
 
-                    if(energyleafHttpsClient->connected() && httpCode >= 200 && httpCode <= 299) {
+                    if(energyleafHttpsClient->connected() && httpCode >= 200 && httpCode <= 299 && energyleafHttpsClient->header("Transfer-Encoding").equals("chunked")) {
                         AddLog(LOG_LEVEL_DEBUG,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: GOT A %d STATUS"),httpCode);
                     } else {
                         AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - GOT A %d STATUS"),httpCode);
