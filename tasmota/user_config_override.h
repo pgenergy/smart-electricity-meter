@@ -125,9 +125,9 @@ Examples :
 #endif
 #ifdef SERIAL_LOG_LEVEL
 #undef SERIAL_LOG_LEVEL
-#define SERIAL_LOG_LEVEL       LOG_LEVEL_NONE
+#define SERIAL_LOG_LEVEL       LOG_LEVEL_DEBUG_MORE
 #else
-#define SERIAL_LOG_LEVEL       LOG_LEVEL_NONE
+#define SERIAL_LOG_LEVEL       LOG_LEVEL_DEBUG_MORE
 #endif
 
 #ifdef WEB_LOG_LEVEL
@@ -138,7 +138,7 @@ Examples :
 #endif
 
 //Uncomment and modify values to use Syslog
-/*#ifdef SYS_LOG_HOST
+#ifdef SYS_LOG_HOST
 #undef SYS_LOG_HOST
 #define SYS_LOG_HOST       "192.168.1.5"
 #else
@@ -146,10 +146,10 @@ Examples :
 #endif
 #ifdef SYS_LOG_LEVEL
 #undef SYS_LOG_LEVEL
-#define SYS_LOG_LEVEL       LOG_LEVEL_NONE
+#define SYS_LOG_LEVEL       LOG_LEVEL_DEBUG_MORE
 #else
-#define SYS_LOG_LEVEL       LOG_LEVEL_NONE
-#endif*/
+#define SYS_LOG_LEVEL       LOG_LEVEL_DEBUG_MORE
+#endif
 
 #ifdef MQTT_USE
 #undef MQTT_USE
