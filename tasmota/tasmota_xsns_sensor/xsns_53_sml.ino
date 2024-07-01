@@ -4691,9 +4691,9 @@ void SML_Energyleaf_Sensor_Intern(const char *mp,uint8_t index,uint8_t mindex, b
             yield();
           }
         } else if (strcmp(jname,ENERGYLEAF_KEYWORD_VALUE_OUT) == 0) {
-          energyleaf_mem->value_current = sml_globs.meter_vars[index];
-        } else if (strcmp(jname,ENERGYLEAF_KEYWORD_VALUE_CURRENT) == 0) {
           energyleaf_mem->value_out = sml_globs.meter_vars[index];
+        } else if (strcmp(jname,ENERGYLEAF_KEYWORD_VALUE_CURRENT) == 0) {
+          energyleaf_mem->value_current = sml_globs.meter_vars[index];
         }
       }
     }
