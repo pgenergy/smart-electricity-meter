@@ -16,3 +16,6 @@ upload:
 monitor:
 	pio device monitor
 
+.PHONY: erase-upload
+erase-upload:
+	pio run -t erase_upload -e ${TARGET}

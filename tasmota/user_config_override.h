@@ -146,9 +146,9 @@ Examples :
 #endif
 #ifdef SYS_LOG_LEVEL
 #undef SYS_LOG_LEVEL
-#define SYS_LOG_LEVEL       LOG_LEVEL_NONE
+#define SYS_LOG_LEVEL       LOG_LEVEL_DEBUG_MORE
 #else
-#define SYS_LOG_LEVEL       LOG_LEVEL_NONE
+#define SYS_LOG_LEVEL       LOG_LEVEL_DEBUG_MORE
 #endif*/
 
 #ifdef MQTT_USE
