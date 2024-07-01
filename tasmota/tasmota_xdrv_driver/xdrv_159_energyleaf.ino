@@ -245,6 +245,10 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                     energyleafHttpsClient->addHeader("Content-Type", "application/x-protobuf");
                     energyleafHttpsClient->addHeader("Content-Length", String(byteswritten));
 
+                    const char *headerKeys[] = {"Transfer-Encoding"};
+                    const size_t headerKeysCount = sizeof(headerKeys) / sizeof(headerKeys[0]);
+                    energyleafHttpsClient->collectHeaders(headerKeys, headerKeysCount);
+
                     int httpCode = energyleafHttpsClient->POST(bufferSensorDataRequest, byteswritten);
 
                     if(bufferSensorDataRequest != nullptr) {
@@ -489,6 +493,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     energyleafHttpsClient->setUserAgent("Energyleaf-Sensor-Digital");
                     energyleafHttpsClient->addHeader("Content-Type", "application/x-protobuf");
                     energyleafHttpsClient->addHeader("Content-Length", String(byteswritten));
+
+                    const char *headerKeys[] = {"Transfer-Encoding"};
+                    const size_t headerKeysCount = sizeof(headerKeys) / sizeof(headerKeys[0]);
+                    energyleafHttpsClient->collectHeaders(headerKeys, headerKeysCount);
 
                     int httpCode = energyleafHttpsClient->POST(bufferTokenRequest, byteswritten);
 
