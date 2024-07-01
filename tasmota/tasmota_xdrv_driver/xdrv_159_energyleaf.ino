@@ -573,7 +573,6 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         bitWrite(Settings->rule_enabled, 0, 1);
                         SaveScript();
                         SaveScriptEnd();
-                        //ScriptSaveSettings();
 
                         energyleaf->needScript = false;
                     } else {
