@@ -206,16 +206,22 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
 
                     state = pb_encode(streamSensorDataRequestOut,energyleaf_SensorDataRequestV2_fields, sensorDataRequest);
                     byteswritten = streamSensorDataRequestOut->bytes_written;
-                    delete streamSensorDataRequestOut;
-                    streamSensorDataRequestOut = nullptr;
-                    delete sensorDataRequest;
-                    sensorDataRequest = nullptr;
+                    if(streamSensorDataRequestOut != nullptr) {
+                        delete streamSensorDataRequestOut;
+                        streamSensorDataRequestOut = nullptr;
+                    }
+                    if(sensorDataRequest != nullptr) {
+                        delete sensorDataRequest;
+                        sensorDataRequest = nullptr;
+                    }
                 }
 
                 if(!state) {
                     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - COULD NOT CREATE PACKAGE"));
-                    delete[] bufferSensorDataRequest;
-                    bufferSensorDataRequest = nullptr;
+                    if(bufferSensorDataRequest != nullptr) {
+                        delete[] bufferSensorDataRequest;
+                        bufferSensorDataRequest = nullptr;
+                    }
                     return ENERGYLEAF_ERROR::ERROR;
                 }
                 
@@ -228,8 +234,10 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                     if(!state) {
                         energyleafHttpsClient->end(); 
                         AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE"));
-                        delete[] bufferSensorDataRequest;
-                        bufferSensorDataRequest = nullptr;
+                        if(bufferSensorDataRequest != nullptr) {
+                            delete[] bufferSensorDataRequest;
+                            bufferSensorDataRequest = nullptr;
+                        }
                         return ENERGYLEAF_ERROR::ERROR;
                     }
 
@@ -239,8 +247,10 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
 
                     int httpCode = energyleafHttpsClient->POST(bufferSensorDataRequest, byteswritten);
 
-                    delete[] bufferSensorDataRequest;
-                    bufferSensorDataRequest = nullptr;
+                    if(bufferSensorDataRequest != nullptr) {
+                        delete[] bufferSensorDataRequest;
+                        bufferSensorDataRequest = nullptr;
+                    }
 
                     if(energyleafHttpsClient->connected() && httpCode >= 200 && httpCode <= 299) {
                         AddLog(LOG_LEVEL_DEBUG,PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: GOT A %d STATUS"),httpCode);
@@ -301,10 +311,14 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                             } else {
                                 AddLog(LOG_LEVEL_ERROR,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - NOT ENOUGH SPACE FOR DATA"));
                                 energyleafHttpsClient->end(); 
-                                delete sensorDataResponse;
-                                sensorDataResponse = nullptr;
-                                delete[] bufferSensorDataResponse;
-                                bufferSensorDataResponse = nullptr;
+                                if(sensorDataResponse != nullptr) {
+                                    delete sensorDataResponse;
+                                    sensorDataResponse = nullptr;
+                                }
+                                if(bufferSensorDataResponse != nullptr) {
+                                    delete[] bufferSensorDataResponse;
+                                    bufferSensorDataResponse = nullptr;
+                                }
                                 return ENERGYLEAF_ERROR::ERROR;
                             }
                             ESP.wdtFeed();
@@ -316,10 +330,14 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
 
                     if(!state) {
                         AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - GOT PACKAGE WITH WRONG SIZE [SIZE:%d]"),currentSize);
-                        delete sensorDataResponse;
-                        sensorDataResponse = nullptr;
-                        delete[] bufferSensorDataResponse;
-                        bufferSensorDataResponse = nullptr;
+                        if(sensorDataResponse != nullptr) {
+                            delete sensorDataResponse;
+                            sensorDataResponse = nullptr;
+                        }
+                        if(bufferSensorDataResponse != nullptr) {
+                            delete[] bufferSensorDataResponse;
+                            bufferSensorDataResponse = nullptr;
+                        }
                         return ENERGYLEAF_ERROR::ERROR;
                     }
 
@@ -328,18 +346,24 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                     {
                         pb_istream_t *streamSensorDataResponseIn = new pb_istream_t(pb_istream_from_buffer(bufferSensorDataResponse,currentSize));
                         state = pb_decode(streamSensorDataResponseIn,energyleaf_SensorDataResponse_fields, sensorDataResponse);
-                        delete streamSensorDataResponseIn;
-                        streamSensorDataResponseIn = nullptr;
+                        if(streamSensorDataResponseIn != nullptr) {
+                            delete streamSensorDataResponseIn;
+                            streamSensorDataResponseIn = nullptr;
+                        }
                     }
 
-                    delete[] bufferSensorDataResponse;
-                    bufferSensorDataResponse = nullptr;
+                    if(bufferSensorDataResponse != nullptr) {
+                        delete[] bufferSensorDataResponse;
+                        bufferSensorDataResponse = nullptr;
+                    }
 
                     if(!state) {
                         energyleafHttpsClient->end(); 
                         AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: UNSUCCESSFUL - GOT WRONG CONTENT-TYPE FROM SERVICE"));
-                        delete sensorDataResponse;
-                        sensorDataResponse = nullptr;
+                        if(sensorDataResponse != nullptr) {
+                            delete sensorDataResponse;
+                            sensorDataResponse = nullptr;
+                        }
                         return ENERGYLEAF_ERROR::ERROR;
                     }
                 }
@@ -365,14 +389,18 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                         }
                     }
 
-                    delete sensorDataResponse;
-                    sensorDataResponse = nullptr;
+                    if(sensorDataResponse != nullptr) {
+                        delete sensorDataResponse;
+                        sensorDataResponse = nullptr;
+                    }
 
                     return ret;
                 }
-                
-                delete sensorDataResponse;
-                sensorDataResponse = nullptr;        
+
+                if(sensorDataResponse != nullptr) {
+                    delete sensorDataResponse;
+                    sensorDataResponse = nullptr;      
+                }  
             }
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_DATA_REQUEST: SUCCESSFUL - DATA WAS TRASMITTED TO THE SERVICE"));
             return ENERGYLEAF_ERROR::NO_ERROR;
@@ -420,16 +448,22 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                 
                     state = pb_encode(streamTokenRequestOut,energyleaf_TokenRequest_fields, tokenRequest);
                     byteswritten = streamTokenRequestOut->bytes_written;
-                    delete streamTokenRequestOut;
-                    streamTokenRequestOut = nullptr;
-                    delete tokenRequest;
-                    tokenRequest = nullptr;
+                    if(streamTokenRequestOut != nullptr) {
+                        delete streamTokenRequestOut;
+                        streamTokenRequestOut = nullptr;
+                    }
+                    if(tokenRequest != nullptr) {
+                        delete tokenRequest;
+                        tokenRequest = nullptr;
+                    }
                 }
 
                 if(!state) {
                     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - COULD NOT CREATE PACKAGE"));
-                    delete[] bufferTokenRequest;
-                    bufferTokenRequest = nullptr;
+                    if(bufferTokenRequest != nullptr) {
+                        delete[] bufferTokenRequest;
+                        bufferTokenRequest = nullptr;
+                    }
                     return ENERGYLEAF_ERROR::ERROR;
                 }
 
@@ -444,8 +478,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     if(!state) {
                         energyleafHttpsClient->end(); 
                         AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE"));
-                        delete[] bufferTokenRequest;
-                        bufferTokenRequest = nullptr;
+                        if(bufferTokenRequest != nullptr) {
+                            delete[] bufferTokenRequest;
+                            bufferTokenRequest = nullptr;
+                        }
                         return ENERGYLEAF_ERROR::ERROR;
                     }
 
@@ -455,8 +491,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 
                     int httpCode = energyleafHttpsClient->POST(bufferTokenRequest, byteswritten);
 
-                    delete[] bufferTokenRequest;
-                    bufferTokenRequest = nullptr;
+                    if(bufferTokenRequest != nullptr) {
+                        delete[] bufferTokenRequest;
+                        bufferTokenRequest = nullptr;
+                    }
 
                     if(energyleafHttpsClient->connected() && httpCode >= 200 && httpCode <= 299) {
                         AddLog(LOG_LEVEL_DEBUG,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: GOT A %d STATUS"),httpCode);
@@ -516,12 +554,18 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                             } else {
                                 AddLog(LOG_LEVEL_ERROR,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - NOT ENOUGH SPACE FOR DATA"));
                                 energyleafHttpsClient->end(); 
-                                delete[] bufferScriptAcceptedRequest;
-                                bufferScriptAcceptedRequest = nullptr;
-                                delete tokenResponse;
-                                tokenResponse = nullptr;
-                                delete[] bufferTokenResponse;
-                                bufferTokenResponse = nullptr;
+                                if(bufferScriptAcceptedRequest != nullptr) {
+                                    delete[] bufferScriptAcceptedRequest;
+                                    bufferScriptAcceptedRequest = nullptr;
+                                }
+                                if(tokenResponse != nullptr) {
+                                    delete tokenResponse;
+                                    tokenResponse = nullptr;
+                                }
+                                if(bufferTokenResponse != nullptr) {
+                                    delete[] bufferTokenResponse;
+                                    bufferTokenResponse = nullptr;
+                                }
                                 return ENERGYLEAF_ERROR::ERROR;
                             }
                             ESP.wdtFeed();
@@ -536,32 +580,46 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     if(!state) {
                         energyleafHttpsClient->end(); 
                         AddLog(LOG_LEVEL_ERROR, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - GOT PACKAGE WITH WRONG SIZE [SIZE:%d]"),currentSize);
-                        delete[] bufferScriptAcceptedRequest;
-                        bufferScriptAcceptedRequest = nullptr;
-                        delete tokenResponse;
-                        tokenResponse = nullptr;
-                        delete[] bufferTokenResponse;
-                        bufferTokenResponse = nullptr;
+                        if(bufferScriptAcceptedRequest != nullptr) {
+                            delete[] bufferScriptAcceptedRequest;
+                            bufferScriptAcceptedRequest = nullptr;
+                        }
+                        if(tokenResponse != nullptr) {
+                            delete tokenResponse;
+                            tokenResponse = nullptr;
+                        }
+                        if(bufferTokenResponse != nullptr) {
+                            delete[] bufferTokenResponse;
+                            bufferTokenResponse = nullptr;
+                        }
                         return ENERGYLEAF_ERROR::ERROR;
                     }
 
                     {
                         pb_istream_t *streamTokenResponseIn = new pb_istream_t(pb_istream_from_buffer(bufferTokenResponse,currentSize));
                         state = pb_decode(streamTokenResponseIn,energyleaf_TokenResponse_fields, tokenResponse);
-                        delete streamTokenResponseIn;
-                        streamTokenResponseIn = nullptr;
+                        if(bufferTokenResponse != nullptr) {
+                            delete bufferTokenResponse;
+                            bufferTokenResponse = nullptr;
+                        }
                     }
 
-                    delete[] bufferTokenResponse;
-                    bufferTokenResponse = nullptr;
+                    if(bufferTokenResponse != nullptr) {
+                        delete[] bufferTokenResponse;
+                        bufferTokenResponse = nullptr;
+                    }
 
                     if(!state) {
                         energyleafHttpsClient->end(); 
                         AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - GOT WRONG CONTENT-TYPE FROM SERVICE"));
-                        delete[] bufferScriptAcceptedRequest;
-                        bufferScriptAcceptedRequest = nullptr;
-                        delete tokenResponse;
-                        tokenResponse = nullptr;
+                        if(bufferScriptAcceptedRequest != nullptr) {
+                            delete[] bufferScriptAcceptedRequest;
+                            bufferScriptAcceptedRequest = nullptr;
+                        }
+                        if(tokenResponse != nullptr) {
+                            delete tokenResponse;
+                            tokenResponse = nullptr;
+                        }
                         return ENERGYLEAF_ERROR::ERROR;
                     }
 
@@ -586,10 +644,14 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         ret = ENERGYLEAF_ERROR::ERROR;
                     }
 
-                    delete[] bufferScriptAcceptedRequest;
-                    bufferScriptAcceptedRequest = nullptr;
-                    delete tokenResponse;
-                    tokenResponse = nullptr;
+                    if(bufferScriptAcceptedRequest != nullptr) {
+                        delete[] bufferScriptAcceptedRequest;
+                        bufferScriptAcceptedRequest = nullptr;
+                    }
+                    if(tokenResponse != nullptr) {
+                        delete tokenResponse;
+                        tokenResponse = nullptr;
+                    }
 
                     return ret;
                 }
@@ -610,8 +672,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                         if(!state) {
                             AddLog(LOG_LEVEL_ERROR,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - SCRIPT IS TO LARGE"));
                             energyleafHttpsClient->end(); 
-                            delete tokenResponse;
-                            tokenResponse = nullptr;
+                            if(tokenResponse != nullptr) {
+                                delete tokenResponse;
+                                tokenResponse = nullptr;
+                            }
                             return ENERGYLEAF_ERROR::ERROR;
                         }
 
@@ -630,10 +694,14 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 
                         energyleaf->needScript = false;
                     } else {
+                        if(bufferScriptAcceptedRequest != nullptr) {
                         delete[] bufferScriptAcceptedRequest;
                         bufferScriptAcceptedRequest = nullptr;
-                        delete tokenResponse;
-                        tokenResponse = nullptr;
+                        }
+                        if(tokenResponse != nullptr) {
+                            delete tokenResponse;
+                            tokenResponse = nullptr;
+                        }
                         if(energyleaf->needScript) {
                             AddLog(LOG_LEVEL_ERROR,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - SCRIPT REQUEST BUT NOT RECEIVED "));
                             energyleafHttpsClient->end(); 
@@ -647,8 +715,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     }
                 }
 
-                delete tokenResponse;
-                tokenResponse = nullptr;
+                if(tokenResponse != nullptr) {
+                    delete tokenResponse;
+                    tokenResponse = nullptr;
+                }
                 energyleafHttpsClient->end(); 
 
                 //Prepare ScriptAcceptedRequest
@@ -663,16 +733,22 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                 
                     state = pb_encode(streamScriptAcceptedRequestOut,energyleaf_ScriptAcceptedRequest_fields, scriptAcceptedRequest);
                     byteswritten = streamScriptAcceptedRequestOut->bytes_written;
-                    delete streamScriptAcceptedRequestOut;
-                    streamScriptAcceptedRequestOut = nullptr;
-                    delete scriptAcceptedRequest;
-                    scriptAcceptedRequest = nullptr;
+                    if(streamScriptAcceptedRequestOut != nullptr) {
+                        delete streamScriptAcceptedRequestOut;
+                        streamScriptAcceptedRequestOut = nullptr;
+                    }
+                    if(scriptAcceptedRequest != nullptr) {
+                        delete scriptAcceptedRequest;
+                        scriptAcceptedRequest = nullptr;
+                    }
                 }
 
                 if(!state) {
                     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - COULD NOT CREATE SAR-PACKAGE"));
-                    delete[] bufferScriptAcceptedRequest;
-                    bufferScriptAcceptedRequest = nullptr;
+                    if(bufferScriptAcceptedRequest != nullptr) {
+                        delete[] bufferScriptAcceptedRequest;
+                        bufferScriptAcceptedRequest = nullptr;
+                    }
                     return ENERGYLEAF_ERROR::ERROR;
                 }
 
@@ -682,8 +758,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                 if(!state) {
                     energyleafHttpsClient->end(); 
                     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - COULD NOT CONNECT TO SERVICE"));
-                    delete[] bufferScriptAcceptedRequest;
-                    bufferScriptAcceptedRequest = nullptr;
+                    if(bufferScriptAcceptedRequest != nullptr) {
+                        delete[] bufferScriptAcceptedRequest;
+                        bufferScriptAcceptedRequest = nullptr;
+                    }
                     return ENERGYLEAF_ERROR::ERROR;
                 }
 
@@ -696,8 +774,10 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
                     AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: CONNECTED TO ENERGYLEAF SERIVCE"));
                     int httpCode = energyleafHttpsClient->POST(bufferScriptAcceptedRequest, byteswritten);
 
-                    delete[] bufferScriptAcceptedRequest;
-                    bufferScriptAcceptedRequest = nullptr;
+                    if(bufferScriptAcceptedRequest != nullptr) {
+                        delete[] bufferScriptAcceptedRequest;
+                        bufferScriptAcceptedRequest = nullptr;
+                    }
 
                     if(energyleafHttpsClient->connected() && httpCode >= 200 && httpCode <= 299) {
                         AddLog(LOG_LEVEL_DEBUG,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: GOT A %d STATUS"),httpCode);
