@@ -350,12 +350,13 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
                             delete streamSensorDataResponseIn;
                             streamSensorDataResponseIn = nullptr;
                         }
+                        if(bufferSensorDataResponse != nullptr) {
+                            delete[] bufferSensorDataResponse;
+                            bufferSensorDataResponse = nullptr;
+                        }
                     }
 
-                    if(bufferSensorDataResponse != nullptr) {
-                        delete[] bufferSensorDataResponse;
-                        bufferSensorDataResponse = nullptr;
-                    }
+                    
 
                     if(!state) {
                         energyleafHttpsClient->end(); 
