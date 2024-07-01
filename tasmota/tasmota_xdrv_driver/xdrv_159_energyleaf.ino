@@ -708,10 +708,6 @@ void energyleafEverySecond(void) {
             --energyleaf->expiresIn;
         }
 
-        #ifdef ENERGYLEAF_TEST_INSTANCE
-        energyleaf->smlUpdate = true;
-        #endif
-
         //request sensor to send new data (driver is running, script is enable, no lock is set and wifi is connected)
         if(energyleaf->running && energyleaf->full_running && bitRead(Settings->rule_enabled,0) && !energyleaf->lock && WiFi.isConnected()) {
             if(!energyleaf->sleep){
