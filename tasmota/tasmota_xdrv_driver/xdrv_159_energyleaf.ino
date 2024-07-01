@@ -41,6 +41,7 @@ struct ENERGYLEAF_STATE {
     uint8_t counterAutoResetRetry = ENERGYLEAF_RETRY_AUTO_RESET;
     uint8_t retCnt = 0;
     bool dataRdy = false;
+    bool wifiEnable = false;
 };
 
 struct ENERGYLEAF_MEM {
@@ -158,7 +159,7 @@ ENERGYLEAF_ERROR energyleafSendDataIntern(void) {
     if(energyleafClient && energyleafHttpsClient) {
         ESP.wdtFeed();
         yield();
-        if(WiFi.isConnected()) {
+        if(energyleaf->wifiEnable) {
             ESP.wdtFeed();
             yield();
             #if ENERGYLEAF_USE_LED == true
@@ -370,7 +371,7 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
         yield();
         //fresh start and the default script is loaded, not the script of the sensor.
         AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: PREPARING REQUEST FOR TOKEN%s"),energyleaf->needScript ? " AND FORCING SCRIPT" : "");
-        if(WiFi.isConnected()) {
+        if(energyleaf->wifiEnable) {
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: WIFI IS AVAILABLE"));
 
             bool state = false;
@@ -451,7 +452,6 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
             }
 
             uint8_t* bufferScriptAcceptedRequest = new uint8_t[energyleaf_ScriptAcceptedRequest_size];
-            bool res = false;
             ESP.wdtFeed();
             yield();
 
@@ -570,12 +570,12 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
 
                         script_ex_ptr = nullptr;
 
+                        bitWrite(Settings->rule_enabled, 0, 1);
                         SaveScript();
                         SaveScriptEnd();
+                        //ScriptSaveSettings();
 
-                        bitWrite(Settings->rule_enabled, 0, 1);
                         energyleaf->needScript = false;
-                        res = true;
                     } else {
                         if(energyleaf->needScript) {
                             AddLog(LOG_LEVEL_ERROR,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: UNSUCCESSFUL - SCRIPT REQUEST BUT NOT RECEIVED "));
@@ -650,11 +650,6 @@ ENERGYLEAF_ERROR energyleafRequestTokenIntern(void) {
             delete[] bufferScriptAcceptedRequest;
             bufferScriptAcceptedRequest = nullptr;
 
-            if(res) {
-                AddLog(LOG_LEVEL_INFO,PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: FOLLOWING RESTART IS NORMAL!"));
-                ESP_Restart();
-            }
-
             return ENERGYLEAF_ERROR::NO_ERROR;
         } else {
             AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_DRIVER_TOKEN_REQUEST: NO WIFI TO CREATE A REQUEST - AUTO-RETRY IN SOME TIME"));
@@ -709,7 +704,7 @@ void energyleafEverySecond(void) {
         }
 
         //request sensor to send new data (driver is running, script is enable, no lock is set and wifi is connected)
-        if(energyleaf->running && energyleaf->full_running && bitRead(Settings->rule_enabled,0) && !energyleaf->lock && WiFi.isConnected()) {
+        if(energyleaf->running && energyleaf->full_running && bitRead(Settings->rule_enabled,0) && !energyleaf->lock) {
             if(!energyleaf->sleep){
                 if(energyleaf->timer <= 0) {
                     AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: TIMER EXPIRED - FORWARD"));
@@ -734,9 +729,6 @@ void energyleafEverySecond(void) {
                 energyleaf->needScript = true;
                 AddLog(LOG_LEVEL_INFO, PSTR("ENERGYLEAF_SENSOR: SML-Update [%s]"),energyleaf->smlUpdate ? "true" : "false");
                 energyleaf->active = energyleafRequestTokenIntern() == ENERGYLEAF_ERROR::NO_ERROR ? true : false;
-                if (bitRead(Settings->rule_enabled,0) == 0) {
-                    bitWrite(Settings->rule_enabled, 0, 1);
-                }
                 return;
             }
         }
@@ -849,10 +841,18 @@ bool Xdrv159(uint32_t function) {
     } else {
         switch(function) {
             case FUNC_EVERY_SECOND:
-                if(WiFi.isConnected()) {
+                if(energyleaf->wifiEnable) {
                     //Without wifi a run trough the code will waste instructions.
                     energyleafEverySecond();
                 }
+            break;
+            case FUNC_NETWORK_UP:
+                if(WiFi.isConnected()) {
+                    energyleaf->wifiEnable = true;
+                }
+            break;
+            case FUNC_NETWORK_DOWN:
+                    energyleaf->wifiEnable = false;
             break;
             case FUNC_SET_DEVICE_POWER: 
                 energyleafDevicePower();
