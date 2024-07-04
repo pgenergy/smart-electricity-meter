@@ -43,7 +43,7 @@ jobs:
              mkdir -p ./release
              7z a ./release/esp8266-build.zip ./build_output/*
         
-      - name: Upload c assets to release
+      - name: Upload to release
         env: 
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
         run: |
